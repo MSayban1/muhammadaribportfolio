@@ -1,0 +1,120 @@
+import { motion } from 'framer-motion';
+import { useProjects } from '@/hooks/useFirebaseData';
+import { ExternalLink, Folder } from 'lucide-react';
+
+const PortfolioSection = () => {
+  const { projects } = useProjects();
+
+  // Default projects if none from database
+  const displayProjects = projects.length > 0 ? projects : [
+    {
+      id: '1',
+      title: 'E-commerce Brand Launch',
+      description: 'Grew social media following from 0 to 50K in 3 months with targeted content strategy.',
+      image: '',
+      link: ''
+    },
+    {
+      id: '2',
+      title: 'Restaurant Chain Campaign',
+      description: 'Increased foot traffic by 40% through local social media marketing and influencer partnerships.',
+      image: '',
+      link: ''
+    },
+    {
+      id: '3',
+      title: 'Tech Startup Awareness',
+      description: 'Built brand awareness campaign that generated 10K+ qualified leads for SaaS product.',
+      image: '',
+      link: ''
+    },
+    {
+      id: '4',
+      title: 'Fashion Brand Rebrand',
+      description: 'Complete social media overhaul resulting in 300% increase in engagement rate.',
+      image: '',
+      link: ''
+    },
+    {
+      id: '5',
+      title: 'Healthcare Content Strategy',
+      description: 'Created educational content series that established client as industry thought leader.',
+      image: '',
+      link: ''
+    },
+    {
+      id: '6',
+      title: 'Real Estate Lead Generation',
+      description: 'Developed Facebook ad funnel that reduced cost per lead by 60%.',
+      image: '',
+      link: ''
+    },
+  ];
+
+  return (
+    <section id="portfolio" className="py-20 bg-card/50">
+      <div className="section-container">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            My <span className="gradient-text">Work</span>
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            A showcase of successful campaigns and projects that delivered real results.
+          </p>
+          <div className="w-20 h-1 bg-gradient-to-r from-primary to-accent mx-auto rounded-full mt-4" />
+        </motion.div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayProjects.map((project, index) => (
+            <motion.div
+              key={project.id}
+              className="card-elevated overflow-hidden group"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -5 }}
+            >
+              <div className="h-48 bg-gradient-to-br from-primary/10 to-accent/10 relative overflow-hidden">
+                {project.image ? (
+                  <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Folder size={48} className="text-primary/30" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+              </div>
+              <div className="p-6">
+                <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
+                  {project.title}
+                </h3>
+                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
+                  {project.description}
+                </p>
+                {project.link && (
+                  <a
+                    href={project.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-primary text-sm font-medium hover:underline"
+                  >
+                    View Project
+                    <ExternalLink size={14} className="ml-1" />
+                  </a>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default PortfolioSection;

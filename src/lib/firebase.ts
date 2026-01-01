@@ -1,0 +1,158 @@
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, get, set, push, remove, update, onValue } from 'firebase/database';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBI4Su3YzW7avlJ9GUsNQvGYtv1YjzvHL4",
+  authDomain: "arib-portfolio.firebaseapp.com",
+  databaseURL: "https://arib-portfolio-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "arib-portfolio",
+  storageBucket: "arib-portfolio.firebasestorage.app",
+  messagingSenderId: "686166324284",
+  appId: "1:686166324284:web:a7b91a8f84fdbbfbacff39"
+};
+
+const app = initializeApp(firebaseConfig);
+export const database = getDatabase(app);
+export const auth = getAuth(app);
+
+// Database helpers
+export const dbRef = (path: string) => ref(database, path);
+
+export const getData = async (path: string) => {
+  const snapshot = await get(dbRef(path));
+  return snapshot.exists() ? snapshot.val() : null;
+};
+
+export const setData = async (path: string, data: any) => {
+  await set(dbRef(path), data);
+};
+
+export const pushData = async (path: string, data: any) => {
+  const newRef = push(dbRef(path));
+  await set(newRef, data);
+  return newRef.key;
+};
+
+export const updateData = async (path: string, data: any) => {
+  await update(dbRef(path), data);
+};
+
+export const removeData = async (path: string) => {
+  await remove(dbRef(path));
+};
+
+export const subscribeToData = (path: string, callback: (data: any) => void) => {
+  return onValue(dbRef(path), (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null);
+  });
+};
+
+// Auth helpers
+export const login = async (email: string, password: string) => {
+  return signInWithEmailAndPassword(auth, email, password);
+};
+
+export const signup = async (email: string, password: string) => {
+  return createUserWithEmailAndPassword(auth, email, password);
+};
+
+export const logout = async () => {
+  return signOut(auth);
+};
+
+export const subscribeToAuth = (callback: (user: User | null) => void) => {
+  return onAuthStateChanged(auth, callback);
+};
+
+// Image to Base64 converter
+export const imageToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Types
+export interface Profile {
+  name: string;
+  headline1: string;
+  headline2: string;
+  intro: string;
+  picture: string;
+  yearsExperience: number;
+  clientsWorked: number;
+}
+
+export interface Skill {
+  id?: string;
+  name: string;
+  icon: string;
+}
+
+export interface Service {
+  id?: string;
+  title: string;
+  description: string;
+  image: string;
+  details: string;
+}
+
+export interface Project {
+  id?: string;
+  title: string;
+  description: string;
+  image: string;
+  link?: string;
+}
+
+export interface Testimonial {
+  id?: string;
+  name: string;
+  stars: number;
+  feedback: string;
+  image?: string;
+  approved?: boolean;
+}
+
+export interface Post {
+  id?: string;
+  title: string;
+  content: string;
+  image: string;
+  date: string;
+}
+
+export interface HireRequest {
+  id?: string;
+  name: string;
+  email: string;
+  message: string;
+  serviceId: string;
+  serviceName: string;
+  date: string;
+  status: 'pending' | 'contacted' | 'completed';
+}
+
+export interface ContactSubmission {
+  id?: string;
+  name: string;
+  email: string;
+  message: string;
+  date: string;
+  read: boolean;
+}
+
+export interface SocialLinks {
+  email: string;
+  linkedin: string;
+  facebook: string;
+  instagram: string;
+}
+
+export interface Analytics {
+  pageViews: number;
+  visitors: { [ip: string]: { count: number; lastVisit: string } };
+}
