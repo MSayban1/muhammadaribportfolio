@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { 
   auth, 
   login, 
-  signup, 
   logout, 
   subscribeToAuth,
   getData,
@@ -52,7 +51,6 @@ const AdminPage = () => {
   // Auth state
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
-  const [isSignup, setIsSignup] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
 
   // Data states
@@ -109,13 +107,8 @@ const AdminPage = () => {
     e.preventDefault();
     setAuthLoading(true);
     try {
-      if (isSignup) {
-        await signup(authEmail, authPassword);
-        toast({ title: "Account Created", description: "Welcome to the admin panel!" });
-      } else {
-        await login(authEmail, authPassword);
-        toast({ title: "Welcome Back", description: "You're now logged in." });
-      }
+      await login(authEmail, authPassword);
+      toast({ title: "Welcome Back", description: "You're now logged in." });
     } catch (error: any) {
       toast({ 
         title: "Authentication Error", 
@@ -167,7 +160,7 @@ const AdminPage = () => {
               <Settings className="text-primary-foreground" size={32} />
             </div>
             <h1 className="text-2xl font-bold">Admin Panel</h1>
-            <p className="text-muted-foreground">{isSignup ? 'Create your account' : 'Sign in to continue'}</p>
+            <p className="text-muted-foreground">Sign in to continue</p>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
@@ -192,19 +185,9 @@ const AdminPage = () => {
               disabled={authLoading}
               className="w-full btn-primary disabled:opacity-50"
             >
-              {authLoading ? 'Please wait...' : (isSignup ? 'Create Account' : 'Sign In')}
+              {authLoading ? 'Please wait...' : 'Sign In'}
             </button>
           </form>
-
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              onClick={() => setIsSignup(!isSignup)}
-              className="text-primary hover:underline"
-            >
-              {isSignup ? 'Sign In' : 'Sign Up'}
-            </button>
-          </p>
         </motion.div>
       </div>
     );
@@ -282,16 +265,17 @@ const AdminPage = () => {
 // Profile Editor Component
 const ProfileEditor = ({ profile, socialLinks, onUpdate }: { profile: Profile | null; socialLinks: SocialLinks | null; onUpdate: () => void }) => {
   const [form, setForm] = useState<Profile>({
-    name: profile?.name || 'Muhammad Arib',
-    headline1: profile?.headline1 || 'Social Media Marketing Specialist',
-    headline2: profile?.headline2 || 'Digital Marketing Expert',
+    name: profile?.name || '',
+    headline1: profile?.headline1 || '',
+    headline2: profile?.headline2 || '',
     intro: profile?.intro || '',
     picture: profile?.picture || '',
-    yearsExperience: profile?.yearsExperience || 2,
-    clientsWorked: profile?.clientsWorked || 50
+    bannerImage: profile?.bannerImage || '',
+    yearsExperience: profile?.yearsExperience || 0,
+    clientsWorked: profile?.clientsWorked || 0
   });
   const [links, setLinks] = useState<SocialLinks>({
-    email: socialLinks?.email || 'x.arib147@gmail.com',
+    email: socialLinks?.email || '',
     linkedin: socialLinks?.linkedin || '',
     facebook: socialLinks?.facebook || '',
     instagram: socialLinks?.instagram || ''
@@ -303,6 +287,14 @@ const ProfileEditor = ({ profile, socialLinks, onUpdate }: { profile: Profile | 
     if (file) {
       const base64 = await imageToBase64(file);
       setForm({ ...form, picture: base64 });
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const base64 = await imageToBase64(file);
+      setForm({ ...form, bannerImage: base64 });
     }
   };
 
@@ -325,6 +317,25 @@ const ProfileEditor = ({ profile, socialLinks, onUpdate }: { profile: Profile | 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Edit Profile</h2>
+      
+      {/* Banner Image Section */}
+      <div className="space-y-4">
+        <label className="block text-sm font-medium mb-2">Banner Image (Hero Background)</label>
+        <div className="relative w-full h-32 rounded-2xl bg-secondary overflow-hidden">
+          {form.bannerImage ? (
+            <img src={form.bannerImage} alt="Banner" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              <span>No banner image</span>
+            </div>
+          )}
+          <label className="absolute bottom-2 right-2 btn-outline cursor-pointer bg-background/80 backdrop-blur-sm">
+            <Upload size={18} className="mr-2" />
+            Upload Banner
+            <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" />
+          </label>
+        </div>
+      </div>
       
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">

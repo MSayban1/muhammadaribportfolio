@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Home, Briefcase, FolderOpen, MessageSquare, Mail, Settings } from 'lucide-react';
+import { Menu, X, Home, Briefcase, FolderOpen, MessageSquare, Mail } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const navItems = [
@@ -66,12 +66,6 @@ const Navigation = () => {
                 {item.label}
               </a>
             ))}
-            <Link
-              to="/admin"
-              className="ml-2 p-2 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
-            >
-              <Settings size={20} />
-            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -120,20 +114,6 @@ const Navigation = () => {
                     <span className="font-medium">{item.label}</span>
                   </motion.a>
                 ))}
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: navItems.length * 0.05 }}
-                >
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 p-4 rounded-2xl bg-primary/10 hover:bg-primary/20 transition-colors"
-                  >
-                    <Settings size={20} className="text-primary" />
-                    <span className="font-medium text-primary">Admin Panel</span>
-                  </Link>
-                </motion.div>
               </div>
             </motion.div>
           </>

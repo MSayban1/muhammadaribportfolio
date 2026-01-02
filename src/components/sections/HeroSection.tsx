@@ -3,7 +3,7 @@ import { useProfile, useSocialLinks } from '@/hooks/useFirebaseData';
 import { Mail, Linkedin, Facebook, Instagram, ChevronDown } from 'lucide-react';
 
 const HeroSection = () => {
-  const { profile } = useProfile();
+  const { profile, loading } = useProfile();
   const { socialLinks } = useSocialLinks();
 
   const containerVariants: Variants = {
@@ -30,10 +30,32 @@ const HeroSection = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  if (loading) {
+    return (
+      <section id="hero" className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </section>
+    );
+  }
+
   return (
     <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card" />
+      {/* Banner Image Background */}
+      {profile.bannerImage && (
+        <div className="absolute inset-0 z-0">
+          <img
+            src={profile.bannerImage}
+            alt="Banner"
+            className="w-full h-full object-cover opacity-30"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+        </div>
+      )}
+      
+      {/* Background gradient (fallback if no banner) */}
+      {!profile.bannerImage && (
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card" />
+      )}
       
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -88,7 +110,7 @@ const HeroSection = () => {
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-4xl font-bold text-primary-foreground">
-                  {profile.name.charAt(0)}
+                  {profile.name ? profile.name.charAt(0) : 'A'}
                 </div>
               )}
             </motion.div>
@@ -107,7 +129,7 @@ const HeroSection = () => {
           variants={itemVariants}
           className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4"
         >
-          <span className="gradient-text">{profile.name}</span>
+          <span className="gradient-text">{profile.name || 'Loading...'}</span>
         </motion.h1>
 
         {/* Headlines */}
@@ -125,27 +147,54 @@ const HeroSection = () => {
           variants={itemVariants}
           className="flex justify-center gap-4 mb-12"
         >
-          {[
-            { icon: Mail, href: `mailto:${socialLinks.email}`, label: 'Email' },
-            { icon: Linkedin, href: socialLinks.linkedin, label: 'LinkedIn' },
-            { icon: Facebook, href: socialLinks.facebook, label: 'Facebook' },
-            { icon: Instagram, href: socialLinks.instagram, label: 'Instagram' },
-          ].map((social, index) => (
+          {socialLinks.email && (
             <motion.a
-              key={social.label}
-              href={social.href}
+              href={`mailto:${socialLinks.email}`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-12 h-12 rounded-2xl bg-secondary/50 border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/10 transition-all duration-300"
               whileHover={{ scale: 1.1, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + index * 0.1 }}
             >
-              <social.icon size={20} />
+              <Mail size={20} />
             </motion.a>
-          ))}
+          )}
+          {socialLinks.linkedin && (
+            <motion.a
+              href={socialLinks.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-12 h-12 rounded-2xl bg-secondary/50 border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/10 transition-all duration-300"
+              whileHover={{ scale: 1.1, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Linkedin size={20} />
+            </motion.a>
+          )}
+          {socialLinks.facebook && (
+            <motion.a
+              href={socialLinks.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-12 h-12 rounded-2xl bg-secondary/50 border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/10 transition-all duration-300"
+              whileHover={{ scale: 1.1, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Facebook size={20} />
+            </motion.a>
+          )}
+          {socialLinks.instagram && (
+            <motion.a
+              href={socialLinks.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-12 h-12 rounded-2xl bg-secondary/50 border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/10 transition-all duration-300"
+              whileHover={{ scale: 1.1, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Instagram size={20} />
+            </motion.a>
+          )}
         </motion.div>
 
         {/* CTA Buttons */}

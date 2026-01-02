@@ -3,20 +3,21 @@ import { getData, Profile, Skill, Service, Project, Testimonial, Post, SocialLin
 
 // Default data for initial state
 const defaultProfile: Profile = {
-  name: "Muhammad Arib",
-  headline1: "Social Media Marketing Specialist",
-  headline2: "Digital Marketing Expert",
-  intro: "With over 2 years of experience as a Social Media Marketing Specialist, I help brands increase engagement and drive quality leads. I focus on crafting creative campaigns that deliver measurable results.",
+  name: "",
+  headline1: "",
+  headline2: "",
+  intro: "",
   picture: "",
-  yearsExperience: 2,
-  clientsWorked: 50
+  bannerImage: "",
+  yearsExperience: 0,
+  clientsWorked: 0
 };
 
 const defaultSocialLinks: SocialLinks = {
-  email: "x.arib147@gmail.com",
-  linkedin: "https://www.linkedin.com/in/xarib147/",
-  facebook: "https://www.facebook.com/x.arib147?_rdr",
-  instagram: "https://www.instagram.com/x.arib147/"
+  email: "",
+  linkedin: "",
+  facebook: "",
+  instagram: ""
 };
 
 export const useProfile = () => {
