@@ -3,53 +3,20 @@ import { useProjects } from '@/hooks/useFirebaseData';
 import { ExternalLink, Folder } from 'lucide-react';
 
 const PortfolioSection = () => {
-  const { projects } = useProjects();
+  const { projects, loading } = useProjects();
 
-  // Default projects if none from database
-  const displayProjects = projects.length > 0 ? projects : [
-    {
-      id: '1',
-      title: 'E-commerce Brand Launch',
-      description: 'Grew social media following from 0 to 50K in 3 months with targeted content strategy.',
-      image: '',
-      link: ''
-    },
-    {
-      id: '2',
-      title: 'Restaurant Chain Campaign',
-      description: 'Increased foot traffic by 40% through local social media marketing and influencer partnerships.',
-      image: '',
-      link: ''
-    },
-    {
-      id: '3',
-      title: 'Tech Startup Awareness',
-      description: 'Built brand awareness campaign that generated 10K+ qualified leads for SaaS product.',
-      image: '',
-      link: ''
-    },
-    {
-      id: '4',
-      title: 'Fashion Brand Rebrand',
-      description: 'Complete social media overhaul resulting in 300% increase in engagement rate.',
-      image: '',
-      link: ''
-    },
-    {
-      id: '5',
-      title: 'Healthcare Content Strategy',
-      description: 'Created educational content series that established client as industry thought leader.',
-      image: '',
-      link: ''
-    },
-    {
-      id: '6',
-      title: 'Real Estate Lead Generation',
-      description: 'Developed Facebook ad funnel that reduced cost per lead by 60%.',
-      image: '',
-      link: ''
-    },
-  ];
+  if (loading) {
+    return (
+      <section id="portfolio" className="py-20 bg-card/50">
+        <div className="section-container flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </section>
+    );
+  }
+
+  // Don't show section if no projects
+  if (projects.length === 0) return null;
 
   return (
     <section id="portfolio" className="py-20 bg-card/50">
@@ -70,7 +37,7 @@ const PortfolioSection = () => {
         </motion.div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayProjects.map((project, index) => (
+          {projects.map((project, index) => (
             <motion.div
               key={project.id}
               className="card-elevated overflow-hidden group"
