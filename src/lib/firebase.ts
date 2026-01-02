@@ -82,6 +82,7 @@ export interface Profile {
   headline2: string;
   intro: string;
   picture: string;
+  bannerImage: string;
   yearsExperience: number;
   clientsWorked: number;
 }
