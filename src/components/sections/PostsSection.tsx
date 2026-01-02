@@ -3,32 +3,7 @@ import { usePosts } from '@/hooks/useFirebaseData';
 import { Calendar, ArrowRight } from 'lucide-react';
 
 const PostsSection = () => {
-  const { posts } = usePosts();
-
-  // Default posts if none from database
-  const displayPosts = posts.length > 0 ? posts : [
-    {
-      id: '1',
-      title: '5 Social Media Trends for 2024',
-      content: 'Discover the latest trends shaping social media marketing and how to leverage them for your brand.',
-      image: '',
-      date: new Date().toISOString()
-    },
-    {
-      id: '2',
-      title: 'The Power of Video Content',
-      content: 'Learn why video content is dominating digital marketing and how to create engaging videos on a budget.',
-      image: '',
-      date: new Date(Date.now() - 86400000).toISOString()
-    },
-    {
-      id: '3',
-      title: 'Building Brand Authenticity',
-      content: 'How to build genuine connections with your audience through authentic brand storytelling.',
-      image: '',
-      date: new Date(Date.now() - 172800000).toISOString()
-    },
-  ];
+  const { posts, loading } = usePosts();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -38,7 +13,18 @@ const PostsSection = () => {
     });
   };
 
-  if (displayPosts.length === 0) return null;
+  if (loading) {
+    return (
+      <section id="posts" className="py-20 bg-card/50">
+        <div className="section-container flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </section>
+    );
+  }
+
+  // Don't show section if no posts
+  if (posts.length === 0) return null;
 
   return (
     <section id="posts" className="py-20 bg-card/50">
@@ -59,7 +45,7 @@ const PostsSection = () => {
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {displayPosts.slice(0, 3).map((post, index) => (
+          {posts.slice(0, 3).map((post, index) => (
             <motion.article
               key={post.id}
               className="card-elevated overflow-hidden group cursor-pointer"

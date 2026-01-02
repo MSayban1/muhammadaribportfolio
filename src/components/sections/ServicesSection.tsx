@@ -1,48 +1,17 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useServices } from '@/hooks/useFirebaseData';
+import { useServices, useSocialLinks } from '@/hooks/useFirebaseData';
 import { ArrowRight, X, Linkedin, Mail, Send } from 'lucide-react';
 import { pushData } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
 
 const ServicesSection = () => {
-  const { services } = useServices();
+  const { services, loading } = useServices();
+  const { socialLinks } = useSocialLinks();
   const [selectedService, setSelectedService] = useState<any>(null);
   const [showHireModal, setShowHireModal] = useState(false);
   const [hireForm, setHireForm] = useState({ name: '', email: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
-
-  // Default services if none from database
-  const displayServices = services.length > 0 ? services : [
-    {
-      id: '1',
-      title: 'Social Media Management',
-      description: 'Complete management of your social media presence across all platforms.',
-      image: '',
-      details: 'I will create, curate, and manage all posted content. I handle community management, audience engagement, and growth strategies to build your brand\'s online presence.'
-    },
-    {
-      id: '2',
-      title: 'Content Marketing',
-      description: 'Strategic content creation that drives engagement and conversions.',
-      image: '',
-      details: 'From blog posts to video scripts, I create content that resonates with your target audience and aligns with your brand voice. Every piece is optimized for maximum reach and engagement.'
-    },
-    {
-      id: '3',
-      title: 'Paid Advertising',
-      description: 'ROI-focused ad campaigns on Facebook, Instagram, and Google.',
-      image: '',
-      details: 'I design, execute, and optimize paid advertising campaigns that deliver measurable results. From audience targeting to creative design, I handle every aspect of your ad strategy.'
-    },
-    {
-      id: '4',
-      title: 'Brand Strategy',
-      description: 'Develop a compelling brand identity that stands out.',
-      image: '',
-      details: 'I help you define your brand\'s unique voice, visual identity, and positioning strategy. Together, we\'ll create a brand that connects with your audience and drives loyalty.'
-    },
-  ];
 
   const handleHireSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +50,19 @@ const ServicesSection = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <section id="services" className="py-20">
+        <div className="section-container flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </section>
+    );
+  }
+
+  // Don't show section if no services
+  if (services.length === 0) return null;
+
   return (
     <section id="services" className="py-20">
       <div className="section-container">
@@ -100,7 +82,7 @@ const ServicesSection = () => {
         </motion.div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {displayServices.map((service, index) => (
+          {services.map((service, index) => (
             <motion.div
               key={service.id}
               className="card-elevated overflow-hidden group cursor-pointer"
@@ -116,9 +98,7 @@ const ServicesSection = () => {
                 {service.image ? (
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="text-6xl opacity-50">
-                    {index === 0 ? '📱' : index === 1 ? '📝' : index === 2 ? '📊' : '🎨'}
-                  </div>
+                  <div className="text-6xl opacity-50">📦</div>
                 )}
               </div>
               <div className="p-6">
@@ -165,7 +145,7 @@ const ServicesSection = () => {
                   {selectedService.image ? (
                     <img src={selectedService.image} alt={selectedService.title} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="text-7xl">📱</div>
+                    <div className="text-7xl">📦</div>
                   )}
                 </div>
 
@@ -215,22 +195,26 @@ const ServicesSection = () => {
 
                 {/* Quick Options */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                  <a
-                    href="https://www.linkedin.com/in/xarib147/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0077B5]/10 border border-[#0077B5]/30 text-[#0077B5] hover:bg-[#0077B5]/20 transition-colors"
-                  >
-                    <Linkedin size={20} />
-                    <span className="font-medium">LinkedIn</span>
-                  </a>
-                  <a
-                    href="mailto:x.arib147@gmail.com"
-                    className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors"
-                  >
-                    <Mail size={20} />
-                    <span className="font-medium">Email</span>
-                  </a>
+                  {socialLinks.linkedin && (
+                    <a
+                      href={socialLinks.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0077B5]/10 border border-[#0077B5]/30 text-[#0077B5] hover:bg-[#0077B5]/20 transition-colors"
+                    >
+                      <Linkedin size={20} />
+                      <span className="font-medium">LinkedIn</span>
+                    </a>
+                  )}
+                  {socialLinks.email && (
+                    <a
+                      href={`mailto:${socialLinks.email}`}
+                      className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      <Mail size={20} />
+                      <span className="font-medium">Email</span>
+                    </a>
+                  )}
                 </div>
 
                 <div className="relative mb-6">

@@ -6,35 +6,10 @@ import { pushData } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
 
 const TestimonialsSection = () => {
-  const { testimonials } = useTestimonials();
+  const { testimonials, loading } = useTestimonials();
   const [showForm, setShowForm] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ name: '', stars: 5, feedback: '' });
   const [submitting, setSubmitting] = useState(false);
-
-  // Default testimonials if none from database
-  const displayTestimonials = testimonials.length > 0 ? testimonials : [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      stars: 5,
-      feedback: 'Muhammad Arib transformed our social media presence completely. Our engagement rate increased by 200% in just 2 months!',
-      image: ''
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      stars: 5,
-      feedback: 'Working with Arib was a game-changer for our startup. His marketing strategies helped us acquire our first 1000 customers.',
-      image: ''
-    },
-    {
-      id: '3',
-      name: 'Emily Rodriguez',
-      stars: 4,
-      feedback: 'Professional, creative, and results-driven. Arib delivered exactly what we needed for our brand relaunch.',
-      image: ''
-    },
-  ];
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +46,16 @@ const TestimonialsSection = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <section id="testimonials" className="py-20">
+        <div className="section-container flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="testimonials" className="py-20">
       <div className="section-container">
@@ -89,43 +74,49 @@ const TestimonialsSection = () => {
           <div className="w-20 h-1 bg-gradient-to-r from-primary to-accent mx-auto rounded-full mt-4" />
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {displayTestimonials.map((testimonial, index) => (
-            <motion.div
-              key={testimonial.id}
-              className="card-elevated p-6 relative"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -5 }}
-            >
-              <Quote className="absolute top-4 right-4 text-primary/20" size={40} />
-              
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold">
-                  {testimonial.name.charAt(0)}
-                </div>
-                <div>
-                  <h4 className="font-semibold">{testimonial.name}</h4>
-                  <div className="flex gap-0.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        size={14}
-                        className={i < testimonial.stars ? 'fill-primary text-primary' : 'text-muted'}
-                      />
-                    ))}
+        {testimonials.length > 0 && (
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            {testimonials.map((testimonial, index) => (
+              <motion.div
+                key={testimonial.id}
+                className="card-elevated p-6 relative"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
+              >
+                <Quote className="absolute top-4 right-4 text-primary/20" size={40} />
+                
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold overflow-hidden">
+                    {testimonial.image ? (
+                      <img src={testimonial.image} alt={testimonial.name} className="w-full h-full object-cover" />
+                    ) : (
+                      testimonial.name.charAt(0)
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">{testimonial.name}</h4>
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          size={14}
+                          className={i < testimonial.stars ? 'fill-primary text-primary' : 'text-muted'}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <p className="text-muted-foreground leading-relaxed">
-                "{testimonial.feedback}"
-              </p>
-            </motion.div>
-          ))}
-        </div>
+                
+                <p className="text-muted-foreground leading-relaxed">
+                  "{testimonial.feedback}"
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         {/* Feedback Button / Form */}
         <motion.div
