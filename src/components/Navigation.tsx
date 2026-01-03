@@ -138,30 +138,6 @@ const Navigation = () => {
         )}
       </AnimatePresence>
 
-      {/* Bottom Navigation Bar (Mobile) */}
-      <motion.nav
-        className="fixed bottom-4 left-4 right-4 z-40 md:hidden"
-        initial={{ y: 100 }}
-        animate={{ y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <div className="card-elevated p-2 flex justify-around">
-          {navItems.slice(0, 5).map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              onClick={(e) => {
-                e.preventDefault();
-                handleNavClick(item.href);
-              }}
-              className="flex flex-col items-center gap-1 p-2 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all min-w-[60px]"
-            >
-              <item.icon size={20} />
-              <span className="text-xs">{item.label}</span>
-            </a>
-          ))}
-        </div>
-      </motion.nav>
     </>
   );
 };
