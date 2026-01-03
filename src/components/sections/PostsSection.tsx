@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { usePosts } from '@/hooks/useFirebaseData';
 import { Calendar, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const PostsSection = () => {
   const { posts, loading } = usePosts();
@@ -46,42 +47,43 @@ const PostsSection = () => {
 
         <div className="grid md:grid-cols-3 gap-6">
           {posts.slice(0, 3).map((post, index) => (
-            <motion.article
-              key={post.id}
-              className="card-elevated overflow-hidden group cursor-pointer"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -5 }}
-            >
-              <div className="h-48 bg-gradient-to-br from-primary/10 to-accent/10 relative overflow-hidden">
-                {post.image ? (
-                  <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-30">
-                    📝
+            <Link key={post.id} to={`/post/${post.id}`}>
+              <motion.article
+                className="card-elevated overflow-hidden group cursor-pointer h-full"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
+              >
+                <div className="h-48 bg-gradient-to-br from-primary/10 to-accent/10 relative overflow-hidden">
+                  {post.image ? (
+                    <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-30">
+                      📝
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                    <Calendar size={14} />
+                    {formatDate(post.date)}
                   </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                  <Calendar size={14} />
-                  {formatDate(post.date)}
+                  <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                    {post.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
+                    {post.content}
+                  </p>
+                  <div className="flex items-center text-primary text-sm font-medium">
+                    Read More
+                    <ArrowRight size={16} className="ml-2 group-hover:translate-x-2 transition-transform" />
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors line-clamp-2">
-                  {post.title}
-                </h3>
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                  {post.content}
-                </p>
-                <div className="flex items-center text-primary text-sm font-medium">
-                  Read More
-                  <ArrowRight size={16} className="ml-2 group-hover:translate-x-2 transition-transform" />
-                </div>
-              </div>
-            </motion.article>
+              </motion.article>
+            </Link>
           ))}
         </div>
       </div>

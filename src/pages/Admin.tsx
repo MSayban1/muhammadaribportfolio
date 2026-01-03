@@ -10,15 +10,18 @@ import {
   pushData,
   removeData,
   imageToBase64,
+  subscribeToData,
   Profile,
   Skill,
   Service,
   Project,
   Testimonial,
+  ServiceReview,
   Post,
   HireRequest,
   ContactSubmission,
-  SocialLinks
+  SocialLinks,
+  Visitor
 } from '@/lib/firebase';
 import { User } from 'firebase/auth';
 import { 
@@ -38,8 +41,13 @@ import {
   X,
   Upload,
   Eye,
+  EyeOff,
   Check,
-  Zap
+  Zap,
+  Star,
+  Globe,
+  MapPin,
+  Users
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -131,6 +139,7 @@ const AdminPage = () => {
     { id: 'services', label: 'Services', icon: Briefcase },
     { id: 'projects', label: 'Portfolio', icon: FolderOpen },
     { id: 'testimonials', label: 'Testimonials', icon: MessageSquare },
+    { id: 'reviews', label: 'Service Reviews', icon: Star },
     { id: 'posts', label: 'Posts', icon: FileText },
     { id: 'requests', label: 'Requests', icon: Mail },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -246,6 +255,9 @@ const AdminPage = () => {
           )}
           {activeTab === 'testimonials' && (
             <TestimonialsEditor testimonials={testimonials} onUpdate={loadAllData} />
+          )}
+          {activeTab === 'reviews' && (
+            <ServiceReviewsEditor services={services} onUpdate={loadAllData} />
           )}
           {activeTab === 'posts' && (
             <PostsEditor posts={posts} onUpdate={loadAllData} />
@@ -533,7 +545,7 @@ const SkillsEditor = ({ skills, onUpdate }: { skills: Skill[]; onUpdate: () => v
   );
 };
 
-// Generic Item Editor for Services, Projects, Posts
+// Services Editor
 const ServicesEditor = ({ services, onUpdate }: { services: Service[]; onUpdate: () => void }) => {
   const [editing, setEditing] = useState<Service | null>(null);
   const [form, setForm] = useState<Omit<Service, 'id'>>({ title: '', description: '', image: '', details: '' });
@@ -726,10 +738,35 @@ const ProjectsEditor = ({ projects, onUpdate }: { projects: Project[]; onUpdate:
   );
 };
 
+// Testimonials Editor with Picture Upload
 const TestimonialsEditor = ({ testimonials, onUpdate }: { testimonials: Testimonial[]; onUpdate: () => void }) => {
+  const [form, setForm] = useState<Omit<Testimonial, 'id'>>({ name: '', stars: 5, feedback: '', image: '', approved: true });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const base64 = await imageToBase64(file);
+      setForm({ ...form, image: base64 });
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!form.name || !form.feedback) return;
+    await pushData('testimonials', { ...form, date: new Date().toISOString() });
+    toast({ title: "Testimonial Added" });
+    setForm({ name: '', stars: 5, feedback: '', image: '', approved: true });
+    onUpdate();
+  };
+
   const handleApprove = async (id: string) => {
     await setData(`testimonials/${id}/approved`, true);
     toast({ title: "Testimonial Approved" });
+    onUpdate();
+  };
+
+  const handleHide = async (id: string) => {
+    await setData(`testimonials/${id}/approved`, false);
+    toast({ title: "Testimonial Hidden" });
     onUpdate();
   };
 
@@ -743,25 +780,98 @@ const TestimonialsEditor = ({ testimonials, onUpdate }: { testimonials: Testimon
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Manage Testimonials</h2>
       
+      {/* Add New Testimonial Form */}
+      <div className="card-elevated p-4 space-y-4">
+        <h3 className="font-medium">Add New Testimonial</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          <input
+            type="text"
+            placeholder="Client Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="input-modern"
+          />
+          <div className="flex items-center gap-2">
+            <label className="btn-outline cursor-pointer flex items-center gap-2">
+              <Upload size={18} />
+              {form.image ? 'Change Photo' : 'Upload Photo'}
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </label>
+            {form.image && (
+              <div className="w-10 h-10 rounded-full overflow-hidden">
+                <img src={form.image} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium mb-2">Rating</label>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setForm({ ...form, stars: star })}
+                className="p-2 hover:scale-110 transition-transform"
+              >
+                <Star
+                  size={24}
+                  className={star <= form.stars ? 'fill-primary text-primary' : 'text-muted-foreground'}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <textarea
+          placeholder="Client Feedback"
+          value={form.feedback}
+          onChange={(e) => setForm({ ...form, feedback: e.target.value })}
+          rows={3}
+          className="input-modern resize-none"
+        />
+        
+        <button onClick={handleAdd} className="btn-primary">
+          <Plus size={18} className="mr-2" /> Add Testimonial
+        </button>
+      </div>
+      
+      {/* Existing Testimonials */}
       <div className="space-y-4">
         {testimonials.map((t) => (
           <div key={t.id} className={`p-4 rounded-2xl ${t.approved ? 'bg-secondary' : 'bg-primary/5 border border-primary/20'}`}>
             <div className="flex justify-between items-start mb-2">
-              <div>
-                <h4 className="font-semibold">{t.name}</h4>
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} className={i < t.stars ? 'text-primary' : 'text-muted'}>★</span>
-                  ))}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold overflow-hidden">
+                  {t.image ? (
+                    <img src={t.image} alt={t.name} className="w-full h-full object-cover" />
+                  ) : (
+                    t.name.charAt(0)
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-semibold">{t.name}</h4>
+                  <div className="flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} size={14} className={i < t.stars ? 'fill-primary text-primary' : 'text-muted'} />
+                    ))}
+                  </div>
                 </div>
               </div>
               {!t.approved && <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">Pending</span>}
+              {t.approved && <span className="text-xs bg-green-500/20 text-green-600 px-2 py-1 rounded-full">Visible</span>}
             </div>
             <p className="text-muted-foreground mb-3">"{t.feedback}"</p>
             <div className="flex gap-2">
               {!t.approved && (
                 <button onClick={() => handleApprove(t.id!)} className="flex-1 p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center justify-center gap-2">
-                  <Check size={16} /> Approve
+                  <Eye size={16} /> Show
+                </button>
+              )}
+              {t.approved && (
+                <button onClick={() => handleHide(t.id!)} className="flex-1 p-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 flex items-center justify-center gap-2">
+                  <EyeOff size={16} /> Hide
                 </button>
               )}
               <button onClick={() => handleDelete(t.id!)} className="flex-1 p-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 flex items-center justify-center gap-2">
@@ -774,6 +884,202 @@ const TestimonialsEditor = ({ testimonials, onUpdate }: { testimonials: Testimon
           <p className="text-center text-muted-foreground py-8">No testimonials yet</p>
         )}
       </div>
+    </div>
+  );
+};
+
+// Service Reviews Editor
+const ServiceReviewsEditor = ({ services, onUpdate }: { services: Service[]; onUpdate: () => void }) => {
+  const [selectedService, setSelectedService] = useState<string>('');
+  const [reviews, setReviews] = useState<ServiceReview[]>([]);
+  const [form, setForm] = useState<Omit<ServiceReview, 'id'>>({ name: '', stars: 5, feedback: '', image: '', date: '', approved: true });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (selectedService) {
+      loadReviews();
+    }
+  }, [selectedService]);
+
+  const loadReviews = async () => {
+    setLoading(true);
+    const reviewsData = await getData(`serviceReviews/${selectedService}`);
+    if (reviewsData) {
+      const reviewsList = Object.entries(reviewsData).map(([id, review]) => ({ id, ...(review as ServiceReview) }));
+      setReviews(reviewsList);
+    } else {
+      setReviews([]);
+    }
+    setLoading(false);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const base64 = await imageToBase64(file);
+      setForm({ ...form, image: base64 });
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!selectedService || !form.name || !form.feedback) return;
+    await pushData(`serviceReviews/${selectedService}`, { ...form, date: new Date().toISOString() });
+    toast({ title: "Review Added" });
+    setForm({ name: '', stars: 5, feedback: '', image: '', date: '', approved: true });
+    loadReviews();
+  };
+
+  const handleApprove = async (id: string) => {
+    await setData(`serviceReviews/${selectedService}/${id}/approved`, true);
+    toast({ title: "Review Approved" });
+    loadReviews();
+  };
+
+  const handleHide = async (id: string) => {
+    await setData(`serviceReviews/${selectedService}/${id}/approved`, false);
+    toast({ title: "Review Hidden" });
+    loadReviews();
+  };
+
+  const handleDelete = async (id: string) => {
+    await removeData(`serviceReviews/${selectedService}/${id}`);
+    toast({ title: "Review Deleted" });
+    loadReviews();
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">Manage Service Reviews</h2>
+      
+      {/* Service Selector */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Select Service</label>
+        <select
+          value={selectedService}
+          onChange={(e) => setSelectedService(e.target.value)}
+          className="input-modern"
+        >
+          <option value="">Choose a service...</option>
+          {services.map((service) => (
+            <option key={service.id} value={service.id}>{service.title}</option>
+          ))}
+        </select>
+      </div>
+
+      {selectedService && (
+        <>
+          {/* Add Review Form */}
+          <div className="card-elevated p-4 space-y-4">
+            <h3 className="font-medium">Add New Review</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="Reviewer Name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="input-modern"
+              />
+              <div className="flex items-center gap-2">
+                <label className="btn-outline cursor-pointer flex items-center gap-2">
+                  <Upload size={18} />
+                  {form.image ? 'Change Photo' : 'Upload Photo'}
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </label>
+                {form.image && (
+                  <div className="w-10 h-10 rounded-full overflow-hidden">
+                    <img src={form.image} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Rating</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setForm({ ...form, stars: star })}
+                    className="p-2 hover:scale-110 transition-transform"
+                  >
+                    <Star
+                      size={24}
+                      className={star <= form.stars ? 'fill-primary text-primary' : 'text-muted-foreground'}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <textarea
+              placeholder="Review Feedback"
+              value={form.feedback}
+              onChange={(e) => setForm({ ...form, feedback: e.target.value })}
+              rows={3}
+              className="input-modern resize-none"
+            />
+            
+            <button onClick={handleAdd} className="btn-primary">
+              <Plus size={18} className="mr-2" /> Add Review
+            </button>
+          </div>
+
+          {/* Reviews List */}
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reviews.map((review) => (
+                <div key={review.id} className={`p-4 rounded-2xl ${review.approved ? 'bg-secondary' : 'bg-primary/5 border border-primary/20'}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold overflow-hidden">
+                        {review.image ? (
+                          <img src={review.image} alt={review.name} className="w-full h-full object-cover" />
+                        ) : (
+                          review.name.charAt(0)
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">{review.name}</h4>
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} size={14} className={i < review.stars ? 'fill-primary text-primary' : 'text-muted'} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {!review.approved && <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">Pending</span>}
+                    {review.approved && <span className="text-xs bg-green-500/20 text-green-600 px-2 py-1 rounded-full">Visible</span>}
+                  </div>
+                  <p className="text-muted-foreground mb-3">"{review.feedback}"</p>
+                  <div className="flex gap-2">
+                    {!review.approved && (
+                      <button onClick={() => handleApprove(review.id!)} className="flex-1 p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center justify-center gap-2">
+                        <Eye size={16} /> Show
+                      </button>
+                    )}
+                    {review.approved && (
+                      <button onClick={() => handleHide(review.id!)} className="flex-1 p-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 flex items-center justify-center gap-2">
+                        <EyeOff size={16} /> Hide
+                      </button>
+                    )}
+                    <button onClick={() => handleDelete(review.id!)} className="flex-1 p-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 flex items-center justify-center gap-2">
+                      <Trash2 size={16} /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {reviews.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">No reviews for this service yet</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
@@ -921,42 +1227,90 @@ const RequestsViewer = ({ hireRequests, contacts, onUpdate }: { hireRequests: Hi
   );
 };
 
+// Enhanced Analytics Dashboard with IP/Country tracking
 const AnalyticsDashboard = () => {
-  const [analytics, setAnalytics] = useState({ pageViews: 0, uniqueVisitors: 0 });
+  const [analytics, setAnalytics] = useState<{ pageViews: number; visitors: { [key: string]: Visitor } }>({ pageViews: 0, visitors: {} });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadAnalytics = async () => {
-      const data = await getData('analytics');
+    const unsubscribe = subscribeToData('analytics', (data) => {
       if (data) {
-        setAnalytics({
-          pageViews: data.pageViews || 0,
-          uniqueVisitors: data.visitors ? Object.keys(data.visitors).length : 0
-        });
+        setAnalytics(data);
       }
-    };
-    loadAnalytics();
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
+
+  const uniqueVisitors = Object.keys(analytics.visitors || {}).length;
+  const visitorsList = Object.entries(analytics.visitors || {}).map(([key, visitor]) => ({
+    id: key,
+    ...visitor
+  })).sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime());
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
+      <p className="text-sm text-muted-foreground">Real-time visitor tracking</p>
       
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="card-elevated p-6 text-center">
           <Eye className="mx-auto text-primary mb-2" size={32} />
-          <p className="text-3xl font-bold gradient-text">{analytics.pageViews}</p>
+          <p className="text-3xl font-bold gradient-text">{analytics.pageViews || 0}</p>
           <p className="text-muted-foreground">Total Page Views</p>
         </div>
         <div className="card-elevated p-6 text-center">
-          <UserIcon className="mx-auto text-primary mb-2" size={32} />
-          <p className="text-3xl font-bold gradient-text">{analytics.uniqueVisitors}</p>
+          <Users className="mx-auto text-primary mb-2" size={32} />
+          <p className="text-3xl font-bold gradient-text">{uniqueVisitors}</p>
           <p className="text-muted-foreground">Unique Visitors</p>
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground text-center">
-        Analytics data is collected when visitors view your portfolio.
-      </p>
+      {/* Visitors List */}
+      <div className="card-elevated p-4">
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <Globe size={20} className="text-primary" />
+          Recent Visitors
+        </h3>
+        
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {visitorsList.length > 0 ? (
+            visitorsList.slice(0, 50).map((visitor) => (
+              <div key={visitor.id} className="flex items-center justify-between p-3 bg-secondary rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MapPin size={18} className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">
+                      {visitor.country || 'Unknown'} {visitor.city && `• ${visitor.city}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      IP: {visitor.ip || 'Unknown'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium">{visitor.visitCount} visits</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(visitor.lastVisit).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-center text-muted-foreground py-4">No visitors yet</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
