@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import HeroSection from '@/components/sections/HeroSection';
 import AboutSection from '@/components/sections/AboutSection';
+import SkillsSection from '@/components/sections/SkillsSection';
 import ServicesSection from '@/components/sections/ServicesSection';
 import PortfolioSection from '@/components/sections/PortfolioSection';
 import TestimonialsSection from '@/components/sections/TestimonialsSection';
@@ -45,9 +46,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="pb-24 md:pb-0">
+      <main>
         <HeroSection />
         <AboutSection />
+        <SkillsSection />
         <ServicesSection />
         <PortfolioSection />
         <TestimonialsSection />
