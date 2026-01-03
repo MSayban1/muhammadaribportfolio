@@ -1,10 +1,9 @@
 import { motion, Variants } from 'framer-motion';
-import { useProfile, useSkills } from '@/hooks/useFirebaseData';
-import { Users, Calendar, Award, Zap } from 'lucide-react';
+import { useProfile } from '@/hooks/useFirebaseData';
+import { Users, Calendar, Award } from 'lucide-react';
 
 const AboutSection = () => {
   const { profile, loading: profileLoading } = useProfile();
-  const { skills, loading: skillsLoading } = useSkills();
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -108,33 +107,6 @@ const AboutSection = () => {
               ))}
             </motion.div>
           </div>
-
-          {/* Skills Section - Only show if skills exist */}
-          {skills.length > 0 && (
-            <motion.div variants={itemVariants} className="mt-16">
-              <h3 className="text-2xl font-bold mb-8 text-center">
-                <Zap className="inline-block text-primary mr-2 mb-1" size={24} />
-                Skills & Expertise
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                {skills.map((skill, index) => (
-                  <motion.div
-                    key={skill.id}
-                    className="card-elevated p-4 text-center touch-ripple"
-                    whileHover={{ y: -5, scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <span className="text-2xl mb-2 block">{skill.icon}</span>
-                    <p className="text-sm font-medium text-foreground">{skill.name}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
         </motion.div>
       </div>
     </section>

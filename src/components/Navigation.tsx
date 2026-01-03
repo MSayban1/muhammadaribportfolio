@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Home, Briefcase, FolderOpen, MessageSquare, Mail, Sun, Moon } from 'lucide-react';
+import { Menu, X, Home, Briefcase, FolderOpen, MessageSquare, Mail, Sun, Moon, FileText, Zap } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from './ThemeProvider';
 
 const navItems = [
   { icon: Home, label: 'Home', href: '/#hero' },
+  { icon: Zap, label: 'Skills', href: '/#skills' },
   { icon: Briefcase, label: 'Services', href: '/#services' },
   { icon: FolderOpen, label: 'Portfolio', href: '/#portfolio' },
   { icon: MessageSquare, label: 'Testimonials', href: '/#testimonials' },
+  { icon: FileText, label: 'Posts', href: '/#posts' },
   { icon: Mail, label: 'Contact', href: '/#contact' },
 ];
 
