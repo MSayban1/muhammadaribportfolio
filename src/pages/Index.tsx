@@ -9,28 +9,57 @@ import TestimonialsSection from '@/components/sections/TestimonialsSection';
 import PostsSection from '@/components/sections/PostsSection';
 import ContactSection from '@/components/sections/ContactSection';
 import Footer from '@/components/Footer';
-import { pushData, getData, setData } from '@/lib/firebase';
+import { getData, setData } from '@/lib/firebase';
 
 const Index = () => {
-  // Track page views
+  // Track page views with IP and country
   useEffect(() => {
     const trackVisit = async () => {
       try {
+        // Get visitor IP and location info
+        let visitorInfo = {
+          ip: 'unknown',
+          country: 'Unknown',
+          city: ''
+        };
+
+        try {
+          // Use ipapi.co for IP and location detection
+          const ipResponse = await fetch('https://ipapi.co/json/');
+          if (ipResponse.ok) {
+            const ipData = await ipResponse.json();
+            visitorInfo = {
+              ip: ipData.ip || 'unknown',
+              country: ipData.country_name || 'Unknown',
+              city: ipData.city || ''
+            };
+          }
+        } catch (error) {
+          console.log('Could not get IP info:', error);
+        }
+
+        // Get or create visitor ID
+        let visitorId = localStorage.getItem('visitorId');
+        if (!visitorId) {
+          visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          localStorage.setItem('visitorId', visitorId);
+        }
+
         // Get current analytics
         const analytics = await getData('analytics') || { pageViews: 0, visitors: {} };
         
         // Increment page views
         analytics.pageViews = (analytics.pageViews || 0) + 1;
         
-        // Track visitor (using timestamp as simple identifier)
-        const visitorId = localStorage.getItem('visitorId') || `visitor_${Date.now()}`;
-        if (!localStorage.getItem('visitorId')) {
-          localStorage.setItem('visitorId', visitorId);
-        }
-        
+        // Track visitor
         if (!analytics.visitors) analytics.visitors = {};
+        
+        const existingVisitor = analytics.visitors[visitorId];
         analytics.visitors[visitorId] = {
-          count: (analytics.visitors[visitorId]?.count || 0) + 1,
+          ip: visitorInfo.ip,
+          country: visitorInfo.country,
+          city: visitorInfo.city,
+          visitCount: (existingVisitor?.visitCount || 0) + 1,
           lastVisit: new Date().toISOString()
         };
         

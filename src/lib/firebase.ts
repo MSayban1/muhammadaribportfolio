@@ -118,6 +118,16 @@ export interface Testimonial {
   approved?: boolean;
 }
 
+export interface ServiceReview {
+  id?: string;
+  name: string;
+  stars: number;
+  feedback: string;
+  image?: string;
+  date: string;
+  approved?: boolean;
+}
+
 export interface Post {
   id?: string;
   title: string;
@@ -153,7 +163,15 @@ export interface SocialLinks {
   instagram: string;
 }
 
+export interface Visitor {
+  ip: string;
+  country: string;
+  city?: string;
+  lastVisit: string;
+  visitCount: number;
+}
+
 export interface Analytics {
   pageViews: number;
-  visitors: { [ip: string]: { count: number; lastVisit: string } };
+  visitors: { [key: string]: Visitor };
 }
