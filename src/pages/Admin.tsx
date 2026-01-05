@@ -21,7 +21,8 @@ import {
   HireRequest,
   ContactSubmission,
   SocialLinks,
-  Visitor
+  Visitor,
+  CreatorInfo
 } from '@/lib/firebase';
 import { User } from 'firebase/auth';
 import { 
@@ -71,6 +72,7 @@ const AdminPage = () => {
   const [hireRequests, setHireRequests] = useState<HireRequest[]>([]);
   const [contacts, setContacts] = useState<ContactSubmission[]>([]);
   const [socialLinks, setSocialLinks] = useState<SocialLinks | null>(null);
+  const [creatorInfo, setCreatorInfo] = useState<CreatorInfo | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToAuth((user) => {
@@ -85,7 +87,7 @@ const AdminPage = () => {
 
   const loadAllData = async () => {
     try {
-      const [profileData, skillsData, servicesData, projectsData, testimonialsData, postsData, hireData, contactsData, linksData] = await Promise.all([
+      const [profileData, skillsData, servicesData, projectsData, testimonialsData, postsData, hireData, contactsData, linksData, creatorData] = await Promise.all([
         getData('profile'),
         getData('skills'),
         getData('services'),
@@ -94,7 +96,8 @@ const AdminPage = () => {
         getData('posts'),
         getData('hireRequests'),
         getData('contacts'),
-        getData('socialLinks')
+        getData('socialLinks'),
+        getData('creatorInfo')
       ]);
       
       setProfile(profileData);
@@ -106,6 +109,7 @@ const AdminPage = () => {
       setHireRequests(hireData ? Object.entries(hireData).map(([id, h]) => ({ id, ...(h as HireRequest) })) : []);
       setContacts(contactsData ? Object.entries(contactsData).map(([id, c]) => ({ id, ...(c as ContactSubmission) })) : []);
       setSocialLinks(linksData);
+      setCreatorInfo(creatorData);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -242,7 +246,7 @@ const AdminPage = () => {
         {/* Tab Content */}
         <div className="card-elevated p-6">
           {activeTab === 'profile' && (
-            <ProfileEditor profile={profile} socialLinks={socialLinks} onUpdate={loadAllData} />
+            <ProfileEditor profile={profile} socialLinks={socialLinks} creatorInfo={creatorInfo} onUpdate={loadAllData} />
           )}
           {activeTab === 'skills' && (
             <SkillsEditor skills={skills} onUpdate={loadAllData} />
@@ -263,10 +267,10 @@ const AdminPage = () => {
             <PostsEditor posts={posts} onUpdate={loadAllData} />
           )}
           {activeTab === 'requests' && (
-            <RequestsViewer hireRequests={hireRequests} contacts={contacts} onUpdate={loadAllData} />
+            <RequestsViewer hireRequests={hireRequests} contacts={contacts} services={services} onUpdate={loadAllData} />
           )}
           {activeTab === 'analytics' && (
-            <AnalyticsDashboard />
+            <AnalyticsDashboard hireRequests={hireRequests} contacts={contacts} />
           )}
         </div>
       </div>
@@ -275,7 +279,7 @@ const AdminPage = () => {
 };
 
 // Profile Editor Component
-const ProfileEditor = ({ profile, socialLinks, onUpdate }: { profile: Profile | null; socialLinks: SocialLinks | null; onUpdate: () => void }) => {
+const ProfileEditor = ({ profile, socialLinks, creatorInfo, onUpdate }: { profile: Profile | null; socialLinks: SocialLinks | null; creatorInfo: CreatorInfo | null; onUpdate: () => void }) => {
   const [form, setForm] = useState<Profile>({
     name: profile?.name || '',
     headline1: profile?.headline1 || '',
@@ -291,6 +295,10 @@ const ProfileEditor = ({ profile, socialLinks, onUpdate }: { profile: Profile | 
     linkedin: socialLinks?.linkedin || '',
     facebook: socialLinks?.facebook || '',
     instagram: socialLinks?.instagram || ''
+  });
+  const [creator, setCreator] = useState<CreatorInfo>({
+    name: creatorInfo?.name || 'SABAN PRODUCTIONS',
+    link: creatorInfo?.link || ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -315,7 +323,8 @@ const ProfileEditor = ({ profile, socialLinks, onUpdate }: { profile: Profile | 
     try {
       await Promise.all([
         setData('profile', form),
-        setData('socialLinks', links)
+        setData('socialLinks', links),
+        setData('creatorInfo', creator)
       ]);
       toast({ title: "Saved!", description: "Profile updated successfully." });
       onUpdate();
@@ -473,6 +482,34 @@ const ProfileEditor = ({ profile, socialLinks, onUpdate }: { profile: Profile | 
               value={links.instagram}
               onChange={(e) => setLinks({ ...links, instagram: e.target.value })}
               className="input-modern"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Creator Info Section */}
+      <div className="border-t border-border pt-6 mt-6">
+        <h3 className="text-lg font-semibold mb-4">Footer Creator Info</h3>
+        <p className="text-sm text-muted-foreground mb-4">This appears as "Developed by" in the footer</p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Creator Name</label>
+            <input
+              type="text"
+              value={creator.name}
+              onChange={(e) => setCreator({ ...creator, name: e.target.value })}
+              className="input-modern"
+              placeholder="SABAN PRODUCTIONS"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Creator Website Link</label>
+            <input
+              type="url"
+              value={creator.link}
+              onChange={(e) => setCreator({ ...creator, link: e.target.value })}
+              className="input-modern"
+              placeholder="https://example.com"
             />
           </div>
         </div>
@@ -1161,14 +1198,73 @@ const PostsEditor = ({ posts, onUpdate }: { posts: Post[]; onUpdate: () => void 
   );
 };
 
-const RequestsViewer = ({ hireRequests, contacts, onUpdate }: { hireRequests: HireRequest[]; contacts: ContactSubmission[]; onUpdate: () => void }) => {
+const RequestsViewer = ({ hireRequests, contacts, services, onUpdate }: { hireRequests: HireRequest[]; contacts: ContactSubmission[]; services: Service[]; onUpdate: () => void }) => {
   const handleMarkRead = async (id: string) => {
     await setData(`contacts/${id}/read`, true);
     onUpdate();
   };
 
+  const handleUpdateStatus = async (id: string, status: 'pending' | 'contacted' | 'completed') => {
+    await setData(`hireRequests/${id}/status`, status);
+    toast({ title: "Status Updated" });
+    onUpdate();
+  };
+
+  // Calculate stats
+  const totalHireRequests = hireRequests.length;
+  const pendingRequests = hireRequests.filter(r => r.status === 'pending').length;
+  const contactedRequests = hireRequests.filter(r => r.status === 'contacted').length;
+  const completedRequests = hireRequests.filter(r => r.status === 'completed').length;
+  
+  // Requests per service
+  const requestsByService = services.map(service => ({
+    service,
+    total: hireRequests.filter(r => r.serviceId === service.id).length,
+    pending: hireRequests.filter(r => r.serviceId === service.id && r.status === 'pending').length,
+    completed: hireRequests.filter(r => r.serviceId === service.id && r.status === 'completed').length
+  })).filter(s => s.total > 0);
+
   return (
     <div className="space-y-8">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card-elevated p-4 text-center">
+          <p className="text-2xl font-bold text-primary">{totalHireRequests}</p>
+          <p className="text-sm text-muted-foreground">Total Requests</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <p className="text-2xl font-bold text-yellow-500">{pendingRequests}</p>
+          <p className="text-sm text-muted-foreground">Pending</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <p className="text-2xl font-bold text-blue-500">{contactedRequests}</p>
+          <p className="text-sm text-muted-foreground">Contacted</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <p className="text-2xl font-bold text-green-500">{completedRequests}</p>
+          <p className="text-sm text-muted-foreground">Completed</p>
+        </div>
+      </div>
+
+      {/* Requests by Service */}
+      {requestsByService.length > 0 && (
+        <div className="card-elevated p-4">
+          <h3 className="font-semibold mb-4">Requests by Service</h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {requestsByService.map(({ service, total, pending, completed }) => (
+              <div key={service.id} className="p-3 bg-secondary rounded-xl">
+                <p className="font-medium truncate">{service.title}</p>
+                <div className="flex gap-3 mt-2 text-sm">
+                  <span className="text-muted-foreground">Total: {total}</span>
+                  <span className="text-yellow-500">Pending: {pending}</span>
+                  <span className="text-green-500">Done: {completed}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-xl font-semibold mb-4">Hire Requests</h2>
         <div className="space-y-4">
@@ -1179,11 +1275,21 @@ const RequestsViewer = ({ hireRequests, contacts, onUpdate }: { hireRequests: Hi
                   <h4 className="font-semibold">{req.name}</h4>
                   <p className="text-sm text-primary">{req.serviceName}</p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  req.status === 'pending' ? 'bg-primary/20 text-primary' :
-                  req.status === 'contacted' ? 'bg-accent/20 text-accent' :
-                  'bg-muted text-muted-foreground'
-                }`}>{req.status}</span>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={req.status}
+                    onChange={(e) => handleUpdateStatus(req.id!, e.target.value as 'pending' | 'contacted' | 'completed')}
+                    className={`text-xs px-2 py-1 rounded-full border-0 cursor-pointer ${
+                      req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-600' :
+                      req.status === 'contacted' ? 'bg-blue-500/20 text-blue-600' :
+                      'bg-green-500/20 text-green-600'
+                    }`}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
               </div>
               <p className="text-muted-foreground mb-2">{req.message}</p>
               <p className="text-sm text-muted-foreground">
@@ -1199,7 +1305,10 @@ const RequestsViewer = ({ hireRequests, contacts, onUpdate }: { hireRequests: Hi
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-4">Contact Messages</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Contact Messages</h2>
+          <span className="text-sm text-muted-foreground">{contacts.length} total</span>
+        </div>
         <div className="space-y-4">
           {contacts.map((contact) => (
             <div key={contact.id} className={`p-4 rounded-2xl ${contact.read ? 'bg-secondary' : 'bg-primary/5 border border-primary/20'}`}>
@@ -1228,7 +1337,7 @@ const RequestsViewer = ({ hireRequests, contacts, onUpdate }: { hireRequests: Hi
 };
 
 // Enhanced Analytics Dashboard with IP/Country tracking
-const AnalyticsDashboard = () => {
+const AnalyticsDashboard = ({ hireRequests, contacts }: { hireRequests: HireRequest[]; contacts: ContactSubmission[] }) => {
   const [analytics, setAnalytics] = useState<{ pageViews: number; visitors: { [key: string]: Visitor } }>({ pageViews: 0, visitors: {} });
   const [loading, setLoading] = useState(true);
 
@@ -1248,6 +1357,23 @@ const AnalyticsDashboard = () => {
     ...visitor
   })).sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime());
 
+  // Calculate time-based stats
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+
+  const visitorsToday = visitorsList.filter(v => new Date(v.lastVisit) >= today).length;
+  const visitorsLast24h = visitorsList.filter(v => {
+    const visitTime = new Date(v.lastVisit);
+    return (now.getTime() - visitTime.getTime()) < 24 * 60 * 60 * 1000;
+  }).length;
+  const visitorsLastMonth = visitorsList.filter(v => new Date(v.lastVisit) >= lastMonth).length;
+
+  // Requests stats
+  const totalHireRequests = hireRequests.length;
+  const completedRequests = hireRequests.filter(r => r.status === 'completed').length;
+  const totalContacts = contacts.length;
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -1259,18 +1385,49 @@ const AnalyticsDashboard = () => {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
-      <p className="text-sm text-muted-foreground">Real-time visitor tracking</p>
+      <p className="text-sm text-muted-foreground">Real-time visitor tracking & request analytics</p>
       
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="card-elevated p-6 text-center">
-          <Eye className="mx-auto text-primary mb-2" size={32} />
-          <p className="text-3xl font-bold gradient-text">{analytics.pageViews || 0}</p>
-          <p className="text-muted-foreground">Total Page Views</p>
+      {/* Visitor Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card-elevated p-4 text-center">
+          <Eye className="mx-auto text-primary mb-2" size={28} />
+          <p className="text-2xl font-bold gradient-text">{analytics.pageViews || 0}</p>
+          <p className="text-xs text-muted-foreground">Total Page Views</p>
         </div>
-        <div className="card-elevated p-6 text-center">
-          <Users className="mx-auto text-primary mb-2" size={32} />
-          <p className="text-3xl font-bold gradient-text">{uniqueVisitors}</p>
-          <p className="text-muted-foreground">Unique Visitors</p>
+        <div className="card-elevated p-4 text-center">
+          <Users className="mx-auto text-primary mb-2" size={28} />
+          <p className="text-2xl font-bold gradient-text">{uniqueVisitors}</p>
+          <p className="text-xs text-muted-foreground">Unique Visitors</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <Globe className="mx-auto text-green-500 mb-2" size={28} />
+          <p className="text-2xl font-bold text-green-500">{visitorsToday}</p>
+          <p className="text-xs text-muted-foreground">Visitors Today</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <MapPin className="mx-auto text-blue-500 mb-2" size={28} />
+          <p className="text-2xl font-bold text-blue-500">{visitorsLastMonth}</p>
+          <p className="text-xs text-muted-foreground">Last 30 Days</p>
+        </div>
+      </div>
+
+      {/* Request Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card-elevated p-4 text-center border-l-4 border-l-primary">
+          <p className="text-2xl font-bold">{totalContacts}</p>
+          <p className="text-xs text-muted-foreground">Contact Messages</p>
+        </div>
+        <div className="card-elevated p-4 text-center border-l-4 border-l-yellow-500">
+          <p className="text-2xl font-bold">{totalHireRequests}</p>
+          <p className="text-xs text-muted-foreground">Total Hiring Requests</p>
+        </div>
+        <div className="card-elevated p-4 text-center border-l-4 border-l-green-500">
+          <p className="text-2xl font-bold">{completedRequests}</p>
+          <p className="text-xs text-muted-foreground">Completed Requests</p>
+        </div>
+        <div className="card-elevated p-4 text-center border-l-4 border-l-blue-500">
+          <p className="text-2xl font-bold">{visitorsLast24h}</p>
+          <p className="text-xs text-muted-foreground">Last 24 Hours</p>
         </div>
       </div>
 
@@ -1278,12 +1435,12 @@ const AnalyticsDashboard = () => {
       <div className="card-elevated p-4">
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Globe size={20} className="text-primary" />
-          Recent Visitors
+          Recent Visitors ({visitorsList.length})
         </h3>
         
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {visitorsList.length > 0 ? (
-            visitorsList.slice(0, 50).map((visitor) => (
+            visitorsList.slice(0, 100).map((visitor) => (
               <div key={visitor.id} className="flex items-center justify-between p-3 bg-secondary rounded-xl">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">

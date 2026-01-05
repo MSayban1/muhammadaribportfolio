@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getData, Profile, Skill, Service, Project, Testimonial, Post, SocialLinks, subscribeToData } from '@/lib/firebase';
+import { getData, Profile, Skill, Service, Project, Testimonial, Post, SocialLinks, CreatorInfo, subscribeToData } from '@/lib/firebase';
 
 // Default data for initial state
 const defaultProfile: Profile = {
@@ -18,6 +18,11 @@ const defaultSocialLinks: SocialLinks = {
   linkedin: "",
   facebook: "",
   instagram: ""
+};
+
+const defaultCreatorInfo: CreatorInfo = {
+  name: "SABAN PRODUCTIONS",
+  link: ""
 };
 
 export const useProfile = () => {
@@ -159,4 +164,21 @@ export const useSocialLinks = () => {
   }, []);
 
   return { socialLinks, loading };
+};
+
+export const useCreatorInfo = () => {
+  const [creatorInfo, setCreatorInfo] = useState<CreatorInfo>(defaultCreatorInfo);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToData('creatorInfo', (data) => {
+      if (data) {
+        setCreatorInfo({ ...defaultCreatorInfo, ...data });
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  return { creatorInfo, loading };
 };
