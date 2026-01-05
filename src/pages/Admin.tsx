@@ -1383,13 +1383,22 @@ const DataExporter = ({
   contacts: ContactSubmission[];
 }) => {
   const [analytics, setAnalytics] = useState<{ pageViews: number; visitors: { [key: string]: Visitor } }>({ pageViews: 0, visitors: {} });
+  const [admins, setAdmins] = useState<{ id?: string; email: string; addedAt: string; addedBy: string }[]>([]);
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = subscribeToData('analytics', (data) => {
+    const unsubscribeAnalytics = subscribeToData('analytics', (data) => {
       if (data) setAnalytics(data);
     });
-    return () => unsubscribe();
+    const unsubscribeAdmins = subscribeToData('admins', (data) => {
+      if (data) {
+        setAdmins(Object.entries(data).map(([id, admin]: [string, any]) => ({ id, ...admin })));
+      }
+    });
+    return () => {
+      unsubscribeAnalytics();
+      unsubscribeAdmins();
+    };
   }, []);
 
   const generatePDF = async () => {
@@ -1832,6 +1841,97 @@ const DataExporter = ({
           headStyles: { fillColor: [99, 102, 241] },
           styles: { fontSize: 8 },
         });
+      }
+
+      // ===== ADMINS EMAIL LIST SECTION =====
+      doc.addPage();
+      yPos = 20;
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Admins Email List', 14, yPos);
+      yPos += 10;
+
+      if (admins.length > 0) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Email', 'Added By', 'Added On']],
+          body: admins.map((admin, index) => [
+            (index + 1).toString(),
+            admin.email,
+            admin.addedBy || 'System',
+            new Date(admin.addedAt).toLocaleDateString()
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+          styles: { fontSize: 9 },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      } else {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('No admins registered.', 14, yPos);
+        yPos += 15;
+      }
+
+      // ===== CLIENT EMAIL LIST SECTION =====
+      checkNewPage();
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Client Email List', 14, yPos);
+      yPos += 10;
+
+      // Collect unique client emails
+      const clientEmailMap = new Map<string, { email: string; source: string; date: string; name: string }>();
+      
+      contacts.forEach((contact) => {
+        const key = contact.email.toLowerCase();
+        if (!clientEmailMap.has(key) || new Date(contact.date) > new Date(clientEmailMap.get(key)!.date)) {
+          clientEmailMap.set(key, {
+            email: contact.email,
+            source: 'Contact Form',
+            date: contact.date,
+            name: contact.name
+          });
+        }
+      });
+      
+      hireRequests.forEach((request) => {
+        const key = request.email.toLowerCase();
+        const existing = clientEmailMap.get(key);
+        if (!existing || new Date(request.date) > new Date(existing.date)) {
+          clientEmailMap.set(key, {
+            email: request.email,
+            source: existing ? `${existing.source}, Hire Request` : 'Hire Request',
+            date: request.date,
+            name: request.name
+          });
+        }
+      });
+
+      const clientEmails = Array.from(clientEmailMap.values()).sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      if (clientEmails.length > 0) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Name', 'Email', 'Source', 'Last Activity']],
+          body: clientEmails.map((item, index) => [
+            (index + 1).toString(),
+            item.name,
+            item.email,
+            item.source,
+            new Date(item.date).toLocaleDateString()
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+          styles: { fontSize: 9 },
+        });
+      } else {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('No client emails collected.', 14, yPos);
       }
 
       // ===== FOOTER ON ALL PAGES =====
