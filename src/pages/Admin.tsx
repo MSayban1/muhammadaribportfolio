@@ -50,7 +50,8 @@ import {
   MapPin,
   Users,
   Download,
-  AtSign
+  AtSign,
+  Shield
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -152,6 +153,7 @@ const AdminPage = () => {
     { id: 'requests', label: 'Requests', icon: Mail },
     { id: 'emails', label: 'Email List', icon: AtSign },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'admins', label: 'Admins', icon: Shield },
     { id: 'export', label: 'Export Data', icon: Download },
   ];
 
@@ -280,6 +282,9 @@ const AdminPage = () => {
           )}
           {activeTab === 'analytics' && (
             <AnalyticsDashboard hireRequests={hireRequests} contacts={contacts} />
+          )}
+          {activeTab === 'admins' && (
+            <AdminsManager currentUserEmail={user?.email || ''} />
           )}
           {activeTab === 'export' && (
             <DataExporter
@@ -2161,6 +2166,245 @@ const EmailListViewer = ({ hireRequests, contacts }: { hireRequests: HireRequest
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+};
+
+// Admins Manager Component
+interface AdminUser {
+  id?: string;
+  email: string;
+  addedAt: string;
+  addedBy: string;
+}
+
+const AdminsManager = ({ currentUserEmail }: { currentUserEmail: string }) => {
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToData('admins', (data) => {
+      if (data) {
+        const adminsList = Object.entries(data).map(([id, admin]) => ({
+          id,
+          ...(admin as AdminUser)
+        }));
+        setAdmins(adminsList.sort((a, b) => 
+          new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+        ));
+      } else {
+        setAdmins([]);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail || !newPassword) return;
+
+    setAdding(true);
+    try {
+      // Create new user in Firebase Auth
+      const { signup } = await import('@/lib/firebase');
+      await signup(newEmail, newPassword);
+
+      // Add to admins list in database
+      await pushData('admins', {
+        email: newEmail,
+        addedAt: new Date().toISOString(),
+        addedBy: currentUserEmail
+      });
+
+      toast({ title: "Admin Added", description: `${newEmail} has been added as an admin.` });
+      setNewEmail('');
+      setNewPassword('');
+      setShowAddForm(false);
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to add admin.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (admin: AdminUser) => {
+    if (admin.email === currentUserEmail) {
+      toast({ 
+        title: "Cannot Remove", 
+        description: "You cannot remove yourself as admin.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to remove ${admin.email} as admin?`)) return;
+
+    try {
+      await removeData(`admins/${admin.id}`);
+      toast({ title: "Admin Removed", description: `${admin.email} has been removed.` });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to remove admin.", variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Admin Management</h2>
+          <p className="text-sm text-muted-foreground">Manage users who can access this admin panel</p>
+        </div>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="btn-primary flex items-center gap-2"
+        >
+          <Plus size={18} />
+          Add Admin
+        </button>
+      </div>
+
+      {/* Add Admin Form */}
+      {showAddForm && (
+        <div className="card-elevated p-6">
+          <h3 className="font-semibold mb-4">Add New Admin</h3>
+          <form onSubmit={handleAddAdmin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Email</label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="admin@example.com"
+                className="input-modern"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimum 6 characters"
+                className="input-modern"
+                minLength={6}
+                required
+              />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" disabled={adding} className="btn-primary flex items-center gap-2">
+                {adding ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} />
+                    Create Admin
+                  </>
+                )}
+              </button>
+              <button type="button" onClick={() => setShowAddForm(false)} className="btn-outline">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card-elevated p-4 text-center border-l-4 border-l-primary">
+          <p className="text-2xl font-bold">{admins.length}</p>
+          <p className="text-xs text-muted-foreground">Total Admins</p>
+        </div>
+        <div className="card-elevated p-4 text-center border-l-4 border-l-green-500">
+          <Shield className="mx-auto text-green-500 mb-1" size={24} />
+          <p className="text-xs text-muted-foreground">Active Sessions</p>
+        </div>
+      </div>
+
+      {/* Admins List */}
+      <div className="card-elevated overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-secondary">
+            <tr>
+              <th className="text-left p-4 font-medium">#</th>
+              <th className="text-left p-4 font-medium">Email</th>
+              <th className="text-left p-4 font-medium">Added By</th>
+              <th className="text-left p-4 font-medium">Added On</th>
+              <th className="text-left p-4 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {admins.length > 0 ? (
+              admins.map((admin, index) => (
+                <tr key={admin.id} className="border-t border-border hover:bg-muted/50 transition-colors">
+                  <td className="p-4 text-muted-foreground">{index + 1}</td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Shield size={16} className="text-primary" />
+                      </div>
+                      <span className="font-medium">{admin.email}</span>
+                      {admin.email === currentUserEmail && (
+                        <span className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded-full">You</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4 text-muted-foreground">{admin.addedBy || 'System'}</td>
+                  <td className="p-4 text-muted-foreground text-sm">
+                    {new Date(admin.addedAt).toLocaleDateString()}
+                  </td>
+                  <td className="p-4">
+                    {admin.email !== currentUserEmail ? (
+                      <button
+                        onClick={() => handleRemoveAdmin(admin)}
+                        className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Remove Admin"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Cannot remove</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  No admins registered yet. Add your first admin above.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+        <p className="text-sm text-yellow-600 dark:text-yellow-400">
+          <strong>Note:</strong> When you add a new admin, they will be created in Firebase Authentication and can login to this admin panel with their credentials.
+        </p>
       </div>
     </div>
   );
