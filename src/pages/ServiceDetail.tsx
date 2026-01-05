@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Star, Linkedin, Mail, Send, X, Quote, Upload } from 'lucide-react';
-import { getData, pushData, Service, SocialLinks, imageToBase64 } from '@/lib/firebase';
+import { ArrowLeft, Star, Linkedin, Mail, Send, X, Quote } from 'lucide-react';
+import { getData, pushData, Service, SocialLinks } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -27,11 +27,6 @@ const ServiceDetail = () => {
   const [showHireModal, setShowHireModal] = useState(false);
   const [hireForm, setHireForm] = useState({ name: '', email: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
-
-  // Review form state
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewForm, setReviewForm] = useState({ name: '', stars: 5, feedback: '', image: '' });
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -93,49 +88,6 @@ const ServiceDetail = () => {
       });
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleReviewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const base64 = await imageToBase64(file);
-      setReviewForm({ ...reviewForm, image: base64 });
-    }
-  };
-
-  const handleReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reviewForm.name || !reviewForm.feedback) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in your name and feedback.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setReviewSubmitting(true);
-    try {
-      await pushData(`serviceReviews/${id}`, {
-        ...reviewForm,
-        date: new Date().toISOString(),
-        approved: false
-      });
-      toast({
-        title: "Thank You!",
-        description: "Your review has been submitted for approval.",
-      });
-      setReviewForm({ name: '', stars: 5, feedback: '', image: '' });
-      setShowReviewForm(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit review.",
-        variant: "destructive"
-      });
-    } finally {
-      setReviewSubmitting(false);
     }
   };
 
@@ -256,85 +208,7 @@ const ServiceDetail = () => {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground mb-8">No reviews yet. Be the first to leave a review!</p>
-                  )}
-
-                  {/* Leave Review Button/Form */}
-                  {!showReviewForm ? (
-                    <button
-                      onClick={() => setShowReviewForm(true)}
-                      className="btn-outline"
-                    >
-                      Leave a Review
-                    </button>
-                  ) : (
-                    <motion.form
-                      onSubmit={handleReviewSubmit}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="card-elevated p-6 space-y-4"
-                    >
-                      <div className="flex gap-4">
-                        <div className="flex-1">
-                          <input
-                            type="text"
-                            placeholder="Your Name"
-                            value={reviewForm.name}
-                            onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
-                            className="input-modern"
-                          />
-                        </div>
-                        <label className="btn-outline cursor-pointer flex items-center gap-2">
-                          <Upload size={18} />
-                          {reviewForm.image ? 'Change' : 'Photo'}
-                          <input type="file" accept="image/*" onChange={handleReviewImageUpload} className="hidden" />
-                        </label>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Rating</label>
-                        <div className="flex gap-2">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              type="button"
-                              onClick={() => setReviewForm({ ...reviewForm, stars: star })}
-                              className="p-2 hover:scale-110 transition-transform"
-                            >
-                              <Star
-                                size={24}
-                                className={star <= reviewForm.stars ? 'fill-primary text-primary' : 'text-muted-foreground'}
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <textarea
-                        placeholder="Your Review"
-                        value={reviewForm.feedback}
-                        onChange={(e) => setReviewForm({ ...reviewForm, feedback: e.target.value })}
-                        rows={4}
-                        className="input-modern resize-none"
-                      />
-                      
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setShowReviewForm(false)}
-                          className="flex-1 px-4 py-3 rounded-xl border border-border text-muted-foreground hover:bg-secondary transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={reviewSubmitting}
-                          className="flex-1 btn-primary disabled:opacity-50"
-                        >
-                          {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
-                        </button>
-                      </div>
-                    </motion.form>
+                    <p className="text-muted-foreground">No reviews yet.</p>
                   )}
                 </div>
               </motion.div>

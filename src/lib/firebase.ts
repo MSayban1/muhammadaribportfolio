@@ -175,3 +175,8 @@ export interface Analytics {
   pageViews: number;
   visitors: { [key: string]: Visitor };
 }
+
+export interface CreatorInfo {
+  name: string;
+  link: string;
+}

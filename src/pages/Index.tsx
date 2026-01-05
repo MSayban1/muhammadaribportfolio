@@ -72,6 +72,28 @@ const Index = () => {
     trackVisit();
   }, []);
 
+  // Disable right-click and drag on images
+  useEffect(() => {
+    const preventContextMenu = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).tagName === 'IMG') {
+        e.preventDefault();
+      }
+    };
+    const preventDragStart = (e: DragEvent) => {
+      if ((e.target as HTMLElement).tagName === 'IMG') {
+        e.preventDefault();
+      }
+    };
+    
+    document.addEventListener('contextmenu', preventContextMenu);
+    document.addEventListener('dragstart', preventDragStart);
+    
+    return () => {
+      document.removeEventListener('contextmenu', preventContextMenu);
+      document.removeEventListener('dragstart', preventDragStart);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />

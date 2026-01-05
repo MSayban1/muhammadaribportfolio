@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
-import { useSocialLinks } from '@/hooks/useFirebaseData';
-import { Mail, Linkedin, Facebook, Instagram, Heart } from 'lucide-react';
+import { useSocialLinks, useCreatorInfo } from '@/hooks/useFirebaseData';
+import { Mail, Linkedin, Facebook, Instagram } from 'lucide-react';
+import sabanLogo from '@/assets/saban-productions.png';
 
 const Footer = () => {
   const { socialLinks } = useSocialLinks();
+  const { creatorInfo } = useCreatorInfo();
 
   const socialIcons = [
     { icon: Mail, href: `mailto:${socialLinks.email}`, label: 'Email' },
@@ -43,9 +45,24 @@ const Footer = () => {
           </div>
           
           <div className="pt-6 border-t border-border">
-            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-              Made with <Heart size={14} className="text-destructive fill-destructive" /> by Muhammad Arib
-            </p>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className="text-sm text-muted-foreground">Developed by</span>
+              <a
+                href={creatorInfo.link || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-semibold"
+              >
+                <img 
+                  src={sabanLogo} 
+                  alt="SABAN PRODUCTIONS" 
+                  className="h-6 w-6 rounded object-contain"
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+                SABAN PRODUCTIONS
+              </a>
+            </div>
             <p className="text-xs text-muted-foreground mt-2">
               © {new Date().getFullYear()} All rights reserved.
             </p>
