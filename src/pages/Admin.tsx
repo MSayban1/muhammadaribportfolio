@@ -48,8 +48,11 @@ import {
   Star,
   Globe,
   MapPin,
-  Users
+  Users,
+  Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { toast } from '@/hooks/use-toast';
 
 const AdminPage = () => {
@@ -147,6 +150,7 @@ const AdminPage = () => {
     { id: 'posts', label: 'Posts', icon: FileText },
     { id: 'requests', label: 'Requests', icon: Mail },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'export', label: 'Export Data', icon: Download },
   ];
 
   if (loading) {
@@ -271,6 +275,18 @@ const AdminPage = () => {
           )}
           {activeTab === 'analytics' && (
             <AnalyticsDashboard hireRequests={hireRequests} contacts={contacts} />
+          )}
+          {activeTab === 'export' && (
+            <DataExporter
+              profile={profile}
+              skills={skills}
+              services={services}
+              projects={projects}
+              testimonials={testimonials}
+              posts={posts}
+              hireRequests={hireRequests}
+              contacts={contacts}
+            />
           )}
         </div>
       </div>
@@ -1330,6 +1346,642 @@ const RequestsViewer = ({ hireRequests, contacts, services, onUpdate }: { hireRe
           {contacts.length === 0 && (
             <p className="text-center text-muted-foreground py-8">No contact messages yet</p>
           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Data Exporter Component with PDF generation
+const DataExporter = ({
+  profile,
+  skills,
+  services,
+  projects,
+  testimonials,
+  posts,
+  hireRequests,
+  contacts
+}: {
+  profile: Profile | null;
+  skills: Skill[];
+  services: Service[];
+  projects: Project[];
+  testimonials: Testimonial[];
+  posts: Post[];
+  hireRequests: HireRequest[];
+  contacts: ContactSubmission[];
+}) => {
+  const [analytics, setAnalytics] = useState<{ pageViews: number; visitors: { [key: string]: Visitor } }>({ pageViews: 0, visitors: {} });
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToData('analytics', (data) => {
+      if (data) setAnalytics(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const generatePDF = async () => {
+    setGenerating(true);
+    
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPos = 20;
+
+      // Helper function to add new page if needed
+      const checkNewPage = (height: number = 40) => {
+        if (yPos + height > pageHeight - 20) {
+          doc.addPage();
+          yPos = 20;
+        }
+      };
+
+      // Helper function to draw bar chart
+      const drawBarChart = (data: { label: string; value: number; color?: string }[], x: number, y: number, width: number, height: number, title: string) => {
+        checkNewPage(height + 30);
+        
+        // Title
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(title, x, y);
+        y += 10;
+
+        if (data.length === 0) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text('No data available', x, y + 10);
+          return y + 30;
+        }
+
+        const maxValue = Math.max(...data.map(d => d.value), 1);
+        const barHeight = Math.min(15, (height - 20) / data.length);
+        const chartWidth = width - 60;
+
+        data.forEach((item, index) => {
+          const barWidth = (item.value / maxValue) * chartWidth;
+          const barY = y + index * (barHeight + 5);
+
+          // Bar background
+          doc.setFillColor(240, 240, 240);
+          doc.rect(x + 50, barY, chartWidth, barHeight, 'F');
+
+          // Bar fill
+          doc.setFillColor(99, 102, 241);
+          doc.rect(x + 50, barY, barWidth, barHeight, 'F');
+
+          // Label
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          const labelText = item.label.length > 12 ? item.label.substring(0, 12) + '...' : item.label;
+          doc.text(labelText, x, barY + barHeight / 2 + 2);
+
+          // Value
+          doc.text(item.value.toString(), x + 52 + chartWidth, barY + barHeight / 2 + 2);
+        });
+
+        return y + data.length * (barHeight + 5) + 10;
+      };
+
+      // ===== HEADER =====
+      doc.setFillColor(99, 102, 241);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Website Analytics Report', pageWidth / 2, 20, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, 32, { align: 'center' });
+      
+      doc.setTextColor(0, 0, 0);
+      yPos = 55;
+
+      // ===== PROFILE SECTION =====
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Profile Information', 14, yPos);
+      yPos += 10;
+
+      if (profile) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Field', 'Value']],
+          body: [
+            ['Name', profile.name || 'N/A'],
+            ['Headline 1', profile.headline1 || 'N/A'],
+            ['Headline 2', profile.headline2 || 'N/A'],
+            ['Years of Experience', profile.yearsExperience?.toString() || '0'],
+            ['Clients Worked', profile.clientsWorked?.toString() || '0'],
+            ['Intro', profile.intro?.substring(0, 100) + (profile.intro?.length > 100 ? '...' : '') || 'N/A'],
+          ],
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // ===== SKILLS SECTION =====
+      checkNewPage();
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Skills', 14, yPos);
+      yPos += 10;
+
+      if (skills.length > 0) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Skill Name', 'Icon']],
+          body: skills.map((skill, index) => [
+            (index + 1).toString(),
+            skill.name,
+            skill.icon || 'N/A'
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      } else {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('No skills added yet', 14, yPos);
+        yPos += 15;
+      }
+
+      // ===== SERVICES SECTION =====
+      checkNewPage();
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Services', 14, yPos);
+      yPos += 10;
+
+      if (services.length > 0) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Service Title', 'Description']],
+          body: services.map((service, index) => [
+            (index + 1).toString(),
+            service.title,
+            service.description?.substring(0, 60) + (service.description?.length > 60 ? '...' : '') || 'N/A'
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // Services bar chart - requests per service
+      const serviceRequestsData = services.map(service => ({
+        label: service.title,
+        value: hireRequests.filter(r => r.serviceId === service.id).length
+      })).filter(d => d.value > 0);
+
+      if (serviceRequestsData.length > 0) {
+        checkNewPage(100);
+        yPos = drawBarChart(serviceRequestsData, 14, yPos, pageWidth - 28, 80, 'Hiring Requests per Service');
+      }
+
+      // ===== PORTFOLIO SECTION =====
+      checkNewPage();
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Portfolio Projects', 14, yPos);
+      yPos += 10;
+
+      if (projects.length > 0) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Project Title', 'Description', 'Link']],
+          body: projects.map((project, index) => [
+            (index + 1).toString(),
+            project.title,
+            project.description?.substring(0, 40) + (project.description?.length > 40 ? '...' : '') || 'N/A',
+            project.link || 'N/A'
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // ===== TESTIMONIALS SECTION =====
+      checkNewPage();
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Testimonials', 14, yPos);
+      yPos += 10;
+
+      const approvedTestimonials = testimonials.filter(t => t.approved !== false);
+      const hiddenTestimonials = testimonials.filter(t => t.approved === false);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Status', 'Count']],
+        body: [
+          ['Total Testimonials', testimonials.length.toString()],
+          ['Approved/Visible', approvedTestimonials.length.toString()],
+          ['Hidden', hiddenTestimonials.length.toString()],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] },
+      });
+      yPos = (doc as any).lastAutoTable.finalY + 10;
+
+      if (testimonials.length > 0) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Name', 'Stars', 'Feedback', 'Status']],
+          body: testimonials.map((t, index) => [
+            (index + 1).toString(),
+            t.name,
+            '★'.repeat(t.stars),
+            t.feedback?.substring(0, 40) + (t.feedback?.length > 40 ? '...' : '') || 'N/A',
+            t.approved !== false ? 'Visible' : 'Hidden'
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // Star distribution chart
+      const starDistribution = [5, 4, 3, 2, 1].map(stars => ({
+        label: `${stars} Stars`,
+        value: testimonials.filter(t => t.stars === stars).length
+      }));
+
+      checkNewPage(80);
+      yPos = drawBarChart(starDistribution, 14, yPos, pageWidth - 28, 70, 'Testimonial Star Distribution');
+
+      // ===== POSTS SECTION =====
+      checkNewPage();
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Blog Posts', 14, yPos);
+      yPos += 10;
+
+      if (posts.length > 0) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Title', 'Date', 'Content Preview']],
+          body: posts.map((post, index) => [
+            (index + 1).toString(),
+            post.title,
+            new Date(post.date).toLocaleDateString(),
+            post.content?.substring(0, 40) + (post.content?.length > 40 ? '...' : '') || 'N/A'
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // ===== REQUESTS SECTION =====
+      doc.addPage();
+      yPos = 20;
+      
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Hiring Requests Summary', 14, yPos);
+      yPos += 10;
+
+      const pendingRequests = hireRequests.filter(r => r.status === 'pending').length;
+      const contactedRequests = hireRequests.filter(r => r.status === 'contacted').length;
+      const completedRequests = hireRequests.filter(r => r.status === 'completed').length;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Status', 'Count']],
+        body: [
+          ['Total Requests', hireRequests.length.toString()],
+          ['Pending', pendingRequests.toString()],
+          ['Contacted', contactedRequests.toString()],
+          ['Completed', completedRequests.toString()],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] },
+      });
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+
+      // Request status chart
+      const requestStatusData = [
+        { label: 'Pending', value: pendingRequests },
+        { label: 'Contacted', value: contactedRequests },
+        { label: 'Completed', value: completedRequests }
+      ];
+      yPos = drawBarChart(requestStatusData, 14, yPos, pageWidth - 28, 60, 'Request Status Distribution');
+
+      // Detailed requests table
+      if (hireRequests.length > 0) {
+        checkNewPage();
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Detailed Hiring Requests', 14, yPos);
+        yPos += 10;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Name', 'Email', 'Service', 'Status', 'Date']],
+          body: hireRequests.map((req, index) => [
+            (index + 1).toString(),
+            req.name,
+            req.email?.substring(0, 20) || 'N/A',
+            req.serviceName?.substring(0, 15) || 'N/A',
+            req.status,
+            new Date(req.date).toLocaleDateString()
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+          styles: { fontSize: 8 },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // ===== CONTACT MESSAGES =====
+      checkNewPage();
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Contact Messages', 14, yPos);
+      yPos += 10;
+
+      const readMessages = contacts.filter(c => c.read).length;
+      const unreadMessages = contacts.filter(c => !c.read).length;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Status', 'Count']],
+        body: [
+          ['Total Messages', contacts.length.toString()],
+          ['Read', readMessages.toString()],
+          ['Unread', unreadMessages.toString()],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] },
+      });
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+
+      if (contacts.length > 0) {
+        autoTable(doc, {
+          startY: yPos,
+          head: [['#', 'Name', 'Email', 'Message', 'Date', 'Status']],
+          body: contacts.map((c, index) => [
+            (index + 1).toString(),
+            c.name,
+            c.email?.substring(0, 20) || 'N/A',
+            c.message?.substring(0, 30) + (c.message?.length > 30 ? '...' : '') || 'N/A',
+            new Date(c.date).toLocaleDateString(),
+            c.read ? 'Read' : 'Unread'
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+          styles: { fontSize: 8 },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // ===== ANALYTICS SECTION =====
+      doc.addPage();
+      yPos = 20;
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Website Analytics', 14, yPos);
+      yPos += 10;
+
+      const uniqueVisitors = Object.keys(analytics.visitors || {}).length;
+      const visitorsList = Object.entries(analytics.visitors || {}).map(([key, visitor]) => ({
+        id: key,
+        ...visitor
+      }));
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+
+      const visitorsToday = visitorsList.filter(v => new Date(v.lastVisit) >= today).length;
+      const visitorsLastMonth = visitorsList.filter(v => new Date(v.lastVisit) >= lastMonth).length;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Page Views', (analytics.pageViews || 0).toString()],
+          ['Unique Visitors', uniqueVisitors.toString()],
+          ['Visitors Today', visitorsToday.toString()],
+          ['Visitors Last 30 Days', visitorsLastMonth.toString()],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] },
+      });
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+
+      // Visitors by country
+      const countryStats: { [key: string]: number } = {};
+      visitorsList.forEach(v => {
+        const country = v.country || 'Unknown';
+        countryStats[country] = (countryStats[country] || 0) + 1;
+      });
+
+      const countryData = Object.entries(countryStats)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+
+      if (countryData.length > 0) {
+        checkNewPage(100);
+        yPos = drawBarChart(countryData, 14, yPos, pageWidth - 28, 80, 'Visitors by Country (Top 10)');
+      }
+
+      // Recent visitors list
+      if (visitorsList.length > 0) {
+        checkNewPage();
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recent Visitors', 14, yPos);
+        yPos += 10;
+
+        const recentVisitors = visitorsList
+          .sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime())
+          .slice(0, 50);
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['IP Address', 'Country', 'City', 'Visits', 'Last Visit']],
+          body: recentVisitors.map(v => [
+            v.ip || 'Unknown',
+            v.country || 'Unknown',
+            v.city || 'N/A',
+            v.visitCount?.toString() || '1',
+            new Date(v.lastVisit).toLocaleString()
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [99, 102, 241] },
+          styles: { fontSize: 8 },
+        });
+      }
+
+      // ===== FOOTER ON ALL PAGES =====
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        doc.text('Generated by Website Admin Panel', 14, pageHeight - 10);
+      }
+
+      // Save PDF
+      doc.save(`website-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      toast({ title: "PDF Generated!", description: "Your complete data report has been downloaded." });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({ title: "Error", description: "Failed to generate PDF.", variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Calculate summary stats
+  const uniqueVisitors = Object.keys(analytics.visitors || {}).length;
+  const pendingRequests = hireRequests.filter(r => r.status === 'pending').length;
+  const completedRequests = hireRequests.filter(r => r.status === 'completed').length;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Export Complete Data</h2>
+          <p className="text-sm text-muted-foreground">Download all website data as a comprehensive PDF report</p>
+        </div>
+        <button
+          onClick={generatePDF}
+          disabled={generating}
+          className="btn-primary flex items-center gap-2 disabled:opacity-50"
+        >
+          <Download size={20} />
+          {generating ? 'Generating...' : 'Download PDF Report'}
+        </button>
+      </div>
+
+      {/* Preview Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card-elevated p-4 text-center">
+          <UserIcon className="mx-auto text-primary mb-2" size={28} />
+          <p className="text-2xl font-bold">{profile ? 1 : 0}</p>
+          <p className="text-xs text-muted-foreground">Profile</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <Zap className="mx-auto text-yellow-500 mb-2" size={28} />
+          <p className="text-2xl font-bold">{skills.length}</p>
+          <p className="text-xs text-muted-foreground">Skills</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <Briefcase className="mx-auto text-blue-500 mb-2" size={28} />
+          <p className="text-2xl font-bold">{services.length}</p>
+          <p className="text-xs text-muted-foreground">Services</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <FolderOpen className="mx-auto text-green-500 mb-2" size={28} />
+          <p className="text-2xl font-bold">{projects.length}</p>
+          <p className="text-xs text-muted-foreground">Projects</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card-elevated p-4 text-center">
+          <MessageSquare className="mx-auto text-purple-500 mb-2" size={28} />
+          <p className="text-2xl font-bold">{testimonials.length}</p>
+          <p className="text-xs text-muted-foreground">Testimonials</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <FileText className="mx-auto text-orange-500 mb-2" size={28} />
+          <p className="text-2xl font-bold">{posts.length}</p>
+          <p className="text-xs text-muted-foreground">Posts</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <Mail className="mx-auto text-red-500 mb-2" size={28} />
+          <p className="text-2xl font-bold">{hireRequests.length}</p>
+          <p className="text-xs text-muted-foreground">Hire Requests</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <Users className="mx-auto text-cyan-500 mb-2" size={28} />
+          <p className="text-2xl font-bold">{contacts.length}</p>
+          <p className="text-xs text-muted-foreground">Contact Messages</p>
+        </div>
+      </div>
+
+      {/* Data Preview */}
+      <div className="card-elevated p-6">
+        <h3 className="font-semibold mb-4">PDF Report Will Include:</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Profile Information & Stats</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Complete Skills List</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Services with Request Statistics</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Portfolio Projects</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Testimonials with Star Distribution Chart</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Blog Posts</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Hiring Requests (Pending, Contacted, Completed)</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Contact Messages</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Visitor Analytics with Country Distribution</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check size={16} className="text-green-500" />
+              <span>Bar Charts & Visual Statistics</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats Summary */}
+      <div className="card-elevated p-6 border-l-4 border-l-primary">
+        <h3 className="font-semibold mb-3">Quick Summary</h3>
+        <div className="grid md:grid-cols-3 gap-6 text-sm">
+          <div>
+            <p className="text-muted-foreground">Analytics</p>
+            <p className="font-medium">{analytics.pageViews || 0} page views • {uniqueVisitors} unique visitors</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Requests Status</p>
+            <p className="font-medium">{pendingRequests} pending • {completedRequests} completed</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Content</p>
+            <p className="font-medium">{services.length} services • {posts.length} posts • {projects.length} projects</p>
+          </div>
         </div>
       </div>
     </div>
