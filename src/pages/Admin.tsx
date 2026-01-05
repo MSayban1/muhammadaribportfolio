@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   auth, 
@@ -49,7 +49,8 @@ import {
   Globe,
   MapPin,
   Users,
-  Download
+  Download,
+  AtSign
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -149,6 +150,7 @@ const AdminPage = () => {
     { id: 'reviews', label: 'Service Reviews', icon: Star },
     { id: 'posts', label: 'Posts', icon: FileText },
     { id: 'requests', label: 'Requests', icon: Mail },
+    { id: 'emails', label: 'Email List', icon: AtSign },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'export', label: 'Export Data', icon: Download },
   ];
@@ -272,6 +274,9 @@ const AdminPage = () => {
           )}
           {activeTab === 'requests' && (
             <RequestsViewer hireRequests={hireRequests} contacts={contacts} services={services} onUpdate={loadAllData} />
+          )}
+          {activeTab === 'emails' && (
+            <EmailListViewer hireRequests={hireRequests} contacts={contacts} />
           )}
           {activeTab === 'analytics' && (
             <AnalyticsDashboard hireRequests={hireRequests} contacts={contacts} />
@@ -1983,6 +1988,179 @@ const DataExporter = ({
             <p className="font-medium">{services.length} services • {posts.length} posts • {projects.length} projects</p>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// Email List Viewer Component
+const EmailListViewer = ({ hireRequests, contacts }: { hireRequests: HireRequest[]; contacts: ContactSubmission[] }) => {
+  // Collect unique emails from both contacts and hire requests
+  const emailList = React.useMemo(() => {
+    const emailMap = new Map<string, { email: string; source: string; date: string; name: string }>();
+    
+    // Add emails from contact submissions
+    contacts.forEach((contact) => {
+      const key = contact.email.toLowerCase();
+      if (!emailMap.has(key) || new Date(contact.date) > new Date(emailMap.get(key)!.date)) {
+        emailMap.set(key, {
+          email: contact.email,
+          source: 'Contact Form',
+          date: contact.date,
+          name: contact.name
+        });
+      }
+    });
+    
+    // Add emails from hire requests
+    hireRequests.forEach((request) => {
+      const key = request.email.toLowerCase();
+      const existing = emailMap.get(key);
+      if (!existing || new Date(request.date) > new Date(existing.date)) {
+        emailMap.set(key, {
+          email: request.email,
+          source: existing ? `${existing.source}, Direct Hire (${request.serviceName})` : `Direct Hire (${request.serviceName})`,
+          date: request.date,
+          name: request.name
+        });
+      } else if (existing && !existing.source.includes(request.serviceName)) {
+        emailMap.set(key, {
+          ...existing,
+          source: `${existing.source}, Direct Hire (${request.serviceName})`
+        });
+      }
+    });
+    
+    return Array.from(emailMap.values()).sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [contacts, hireRequests]);
+
+  const downloadEmailListPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(79, 70, 229);
+    doc.text('Client Email List', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, 28, { align: 'center' });
+    doc.text(`Total Emails: ${emailList.length}`, pageWidth / 2, 34, { align: 'center' });
+    
+    // Email Table
+    autoTable(doc, {
+      startY: 45,
+      head: [['#', 'Name', 'Email', 'Source', 'Last Activity']],
+      body: emailList.map((item, index) => [
+        index + 1,
+        item.name,
+        item.email,
+        item.source,
+        new Date(item.date).toLocaleDateString()
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 55 },
+        3: { cellWidth: 50 },
+        4: { cellWidth: 30 }
+      }
+    });
+    
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+    }
+    
+    doc.save('client-email-list.pdf');
+    toast({ title: "Downloaded!", description: "Email list PDF has been saved." });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Client Email List</h2>
+          <p className="text-sm text-muted-foreground">Emails collected from contact forms and hire requests</p>
+        </div>
+        <button
+          onClick={downloadEmailListPDF}
+          className="btn-primary flex items-center gap-2"
+          disabled={emailList.length === 0}
+        >
+          <Download size={18} />
+          Download PDF
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="card-elevated p-4 text-center border-l-4 border-l-primary">
+          <p className="text-2xl font-bold">{emailList.length}</p>
+          <p className="text-xs text-muted-foreground">Total Unique Emails</p>
+        </div>
+        <div className="card-elevated p-4 text-center border-l-4 border-l-blue-500">
+          <p className="text-2xl font-bold">{contacts.length}</p>
+          <p className="text-xs text-muted-foreground">From Contact Form</p>
+        </div>
+        <div className="card-elevated p-4 text-center border-l-4 border-l-green-500">
+          <p className="text-2xl font-bold">{hireRequests.length}</p>
+          <p className="text-xs text-muted-foreground">From Hire Requests</p>
+        </div>
+      </div>
+
+      {/* Email List */}
+      <div className="card-elevated overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-secondary">
+            <tr>
+              <th className="text-left p-4 font-medium">#</th>
+              <th className="text-left p-4 font-medium">Name</th>
+              <th className="text-left p-4 font-medium">Email</th>
+              <th className="text-left p-4 font-medium">Source</th>
+              <th className="text-left p-4 font-medium">Last Activity</th>
+            </tr>
+          </thead>
+          <tbody>
+            {emailList.length > 0 ? (
+              emailList.map((item, index) => (
+                <tr key={item.email} className="border-t border-border hover:bg-muted/50 transition-colors">
+                  <td className="p-4 text-muted-foreground">{index + 1}</td>
+                  <td className="p-4 font-medium">{item.name}</td>
+                  <td className="p-4">
+                    <a href={`mailto:${item.email}`} className="text-primary hover:underline">
+                      {item.email}
+                    </a>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-xs px-2 py-1 bg-secondary rounded-full">
+                      {item.source}
+                    </span>
+                  </td>
+                  <td className="p-4 text-muted-foreground text-sm">
+                    {new Date(item.date).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  No emails collected yet. Emails will appear here when clients submit contact forms or hire requests.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
