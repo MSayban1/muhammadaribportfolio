@@ -6,6 +6,14 @@ import { getData, pushData, Service, SocialLinks } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
+import { 
+  hireRequestSchema, 
+  validateForm, 
+  checkRateLimit, 
+  getRateLimitResetTime,
+  sanitizeForDisplay,
+  checkForSpam
+} from '@/lib/security';
 
 interface ServiceReview {
   id?: string;
@@ -27,6 +35,7 @@ const ServiceDetail = () => {
   const [showHireModal, setShowHireModal] = useState(false);
   const [hireForm, setHireForm] = useState({ name: '', email: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const loadData = async () => {
@@ -56,10 +65,37 @@ const ServiceDetail = () => {
 
   const handleHireSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hireForm.name || !hireForm.email || !hireForm.message) {
+    setErrors({});
+
+    // Rate limiting check
+    if (!checkRateLimit('hire-form', 3, 120000)) {
+      const resetTime = Math.ceil(getRateLimitResetTime('hire-form', 120000) / 1000);
       toast({
-        title: "Missing Information",
-        description: "Please fill in all fields.",
+        title: "Too Many Requests",
+        description: `Please wait ${resetTime} seconds before submitting again.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate form data
+    const validation = validateForm(hireRequestSchema, hireForm);
+    if ('errors' in validation) {
+      setErrors(validation.errors);
+      const firstError = Object.values(validation.errors)[0];
+      toast({
+        title: "Validation Error",
+        description: firstError || "Please check your input.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check for spam
+    if (checkForSpam(hireForm.message)) {
+      toast({
+        title: "Request Blocked",
+        description: "Your message was flagged as spam. Please try again.",
         variant: "destructive"
       });
       return;
@@ -67,8 +103,11 @@ const ServiceDetail = () => {
 
     setSubmitting(true);
     try {
+      // Sanitize data before storing
       await pushData('hireRequests', {
-        ...hireForm,
+        name: sanitizeForDisplay(hireForm.name),
+        email: hireForm.email.trim().toLowerCase(),
+        message: sanitizeForDisplay(hireForm.message),
         serviceId: id,
         serviceName: service?.title,
         date: new Date().toISOString(),
