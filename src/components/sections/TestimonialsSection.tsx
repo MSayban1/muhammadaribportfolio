@@ -4,19 +4,55 @@ import { useTestimonials } from '@/hooks/useFirebaseData';
 import { Star, Quote, Send } from 'lucide-react';
 import { pushData } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
+import { 
+  feedbackFormSchema, 
+  validateForm, 
+  checkRateLimit, 
+  getRateLimitResetTime,
+  sanitizeForDisplay,
+  checkForSpam
+} from '@/lib/security';
 
 const TestimonialsSection = () => {
   const { testimonials, loading } = useTestimonials();
   const [showForm, setShowForm] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ name: '', stars: 5, feedback: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!feedbackForm.name || !feedbackForm.feedback) {
+    setErrors({});
+
+    // Rate limiting check
+    if (!checkRateLimit('feedback-form', 2, 120000)) {
+      const resetTime = Math.ceil(getRateLimitResetTime('feedback-form', 120000) / 1000);
       toast({
-        title: "Missing Information",
-        description: "Please fill in all fields.",
+        title: "Too Many Requests",
+        description: `Please wait ${resetTime} seconds before submitting again.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate form data
+    const validation = validateForm(feedbackFormSchema, feedbackForm);
+    if ('errors' in validation) {
+      setErrors(validation.errors);
+      const firstError = Object.values(validation.errors)[0];
+      toast({
+        title: "Validation Error",
+        description: firstError || "Please check your input.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check for spam
+    if (checkForSpam(feedbackForm.feedback)) {
+      toast({
+        title: "Feedback Blocked",
+        description: "Your feedback was flagged as spam. Please try again.",
         variant: "destructive"
       });
       return;
@@ -24,8 +60,11 @@ const TestimonialsSection = () => {
 
     setSubmitting(true);
     try {
+      // Sanitize data before storing
       await pushData('testimonials', {
-        ...feedbackForm,
+        name: sanitizeForDisplay(feedbackForm.name),
+        stars: feedbackForm.stars,
+        feedback: sanitizeForDisplay(feedbackForm.feedback),
         approved: false,
         date: new Date().toISOString()
       });
