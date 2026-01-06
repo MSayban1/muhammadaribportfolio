@@ -28,14 +28,33 @@ const Navigation = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const isHomePage = location.pathname === '/';
+
   const handleNavClick = (href: string) => {
     setIsOpen(false);
     if (href.startsWith('/#')) {
       const id = href.replace('/#', '');
-      const element = document.getElementById(id);
+      if (isHomePage) {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      } else {
+        // Navigate to home with hash
+        window.location.href = href;
+      }
+    }
+  };
+
+  const handleNameClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isHomePage) {
+      const element = document.getElementById('about');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
+    } else {
+      window.location.href = '/#about';
     }
   };
 
@@ -51,9 +70,9 @@ const Navigation = () => {
         transition={{ duration: 0.5 }}
       >
         <div className="section-container py-4 flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold gradient-text">
+          <a href="/#about" onClick={handleNameClick} className="text-xl font-bold gradient-text cursor-pointer">
             Muhammad Arib
-          </Link>
+          </a>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
