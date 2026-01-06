@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Home, Briefcase, FolderOpen, MessageSquare, Mail, Sun, Moon, FileText, Zap } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from './ThemeProvider';
-import { getData } from '@/lib/firebase';
 const navItems = [
   { icon: Home, label: 'Home', href: '/#hero' },
   { icon: Zap, label: 'Skills', href: '/#skills' },
@@ -14,10 +13,11 @@ const navItems = [
   { icon: Mail, label: 'Contact', href: '/#contact' },
 ];
 
+const HEADER_PROFILE_PICTURE = 'https://i.postimg.cc/TpKz0HBt/arib.png';
+
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
 
@@ -27,16 +27,6 @@ const Navigation = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const loadProfile = async () => {
-      const profile = await getData('profile');
-      if (profile?.picture) {
-        setProfilePicture(profile.picture);
-      }
-    };
-    loadProfile();
   }, []);
 
   const isHomePage = location.pathname === '/';
@@ -82,13 +72,11 @@ const Navigation = () => {
       >
         <div className="section-container py-4 flex items-center justify-between">
           <a href="/#about" onClick={handleNameClick} className="flex items-center gap-3 cursor-pointer">
-            {profilePicture && (
-              <img 
-                src={profilePicture} 
-                alt="Profile" 
-                className="w-9 h-9 rounded-full object-cover border-2 border-primary/30"
-              />
-            )}
+            <img 
+              src={HEADER_PROFILE_PICTURE} 
+              alt="Profile" 
+              className="w-9 h-9 rounded-full object-cover border-2 border-primary/30"
+            />
             <span className="text-xl font-bold gradient-text">Muhammad Arib</span>
           </a>
 
