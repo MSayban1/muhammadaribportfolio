@@ -354,8 +354,12 @@ const ProfileEditor = ({ profile, socialLinks, creatorInfo, onUpdate }: { profil
       ]);
       toast({ title: "Saved!", description: "Profile updated successfully." });
       onUpdate();
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to save changes.", variant: "destructive" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to save changes.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
