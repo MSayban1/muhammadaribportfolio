@@ -4,81 +4,37 @@ import { useTestimonials } from '@/hooks/useFirebaseData';
 import { Star, Quote, Send } from 'lucide-react';
 import { pushData } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
-import { 
-  feedbackFormSchema, 
-  validateForm, 
-  checkRateLimit, 
-  getRateLimitResetTime,
-  sanitizeForDisplay,
-  checkForSpam
-} from '@/lib/security';
 
 const TestimonialsSection = () => {
   const { testimonials, loading } = useTestimonials();
   const [showForm, setShowForm] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ name: '', stars: 5, feedback: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
-
-    // Rate limiting check
-    if (!checkRateLimit('feedback-form', 2, 120000)) {
-      const resetTime = Math.ceil(getRateLimitResetTime('feedback-form', 120000) / 1000);
-      toast({
-        title: "Too Many Requests",
-        description: `Please wait ${resetTime} seconds before submitting again.`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate form data
-    const validation = validateForm(feedbackFormSchema, feedbackForm);
-    if ('errors' in validation) {
-      setErrors(validation.errors);
-      const firstError = Object.values(validation.errors)[0];
-      toast({
-        title: "Validation Error",
-        description: firstError || "Please check your input.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Check for spam
-    if (checkForSpam(feedbackForm.feedback)) {
-      toast({
-        title: "Feedback Blocked",
-        description: "Your feedback was flagged as spam. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setSubmitting(true);
+
     try {
-      // Sanitize data before storing
       await pushData('testimonials', {
-        name: sanitizeForDisplay(feedbackForm.name),
+        name: feedbackForm.name.trim(),
         stars: feedbackForm.stars,
-        feedback: sanitizeForDisplay(feedbackForm.feedback),
+        feedback: feedbackForm.feedback.trim(),
         approved: false,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
       });
+
       toast({
         title: "Thank You!",
         description: "Your feedback has been submitted for review.",
       });
       setFeedbackForm({ name: '', stars: 5, feedback: '' });
       setShowForm(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to submit feedback. Please try again.",
-        variant: "destructive"
+        description: error?.message || "Failed to submit feedback. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);

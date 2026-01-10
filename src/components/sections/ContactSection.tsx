@@ -4,79 +4,35 @@ import { useSocialLinks } from '@/hooks/useFirebaseData';
 import { Mail, Linkedin, Facebook, Instagram, Send, MapPin, Clock } from 'lucide-react';
 import { pushData } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
-import { 
-  contactFormSchema, 
-  validateForm, 
-  checkRateLimit, 
-  getRateLimitResetTime,
-  sanitizeForDisplay,
-  checkForSpam
-} from '@/lib/security';
 
 const ContactSection = () => {
   const { socialLinks } = useSocialLinks();
   const [form, setForm] = useState({ name: '', email: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
-
-    // Rate limiting check
-    if (!checkRateLimit('contact-form', 3, 60000)) {
-      const resetTime = Math.ceil(getRateLimitResetTime('contact-form', 60000) / 1000);
-      toast({
-        title: "Too Many Requests",
-        description: `Please wait ${resetTime} seconds before submitting again.`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate form data
-    const validation = validateForm(contactFormSchema, form);
-    if ('errors' in validation) {
-      setErrors(validation.errors);
-      const firstError = Object.values(validation.errors)[0];
-      toast({
-        title: "Validation Error",
-        description: firstError || "Please check your input.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Check for spam
-    if (checkForSpam(form.message)) {
-      toast({
-        title: "Message Blocked",
-        description: "Your message was flagged as spam. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setSubmitting(true);
+
     try {
-      // Sanitize data before storing
       await pushData('contacts', {
-        name: sanitizeForDisplay(form.name),
+        name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
-        message: sanitizeForDisplay(form.message),
+        message: form.message.trim(),
         date: new Date().toISOString(),
-        read: false
+        read: false,
       });
+
       toast({
         title: "Message Sent!",
         description: "Thank you for reaching out. I'll get back to you soon!",
       });
       setForm({ name: '', email: '', message: '' });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive"
+        description: error?.message || "Failed to send message. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
