@@ -54,6 +54,8 @@ export const useSkills = () => {
           ...(skill as Skill)
         }));
         setSkills(skillsList);
+      } else {
+        setSkills([]);
       }
       setLoading(false);
     });
@@ -75,6 +77,8 @@ export const useServices = () => {
           ...(service as Service)
         }));
         setServices(servicesList);
+      } else {
+        setServices([]);
       }
       setLoading(false);
     });
@@ -96,6 +100,8 @@ export const useProjects = () => {
           ...(project as Project)
         }));
         setProjects(projectsList);
+      } else {
+        setProjects([]);
       }
       setLoading(false);
     });
@@ -119,6 +125,8 @@ export const useTestimonials = () => {
           }))
           .filter(t => t.approved !== false);
         setTestimonials(testimonialsList);
+      } else {
+        setTestimonials([]);
       }
       setLoading(false);
     });
@@ -140,6 +148,8 @@ export const usePosts = () => {
           ...(post as Post)
         }));
         setPosts(postsList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      } else {
+        setPosts([]);
       }
       setLoading(false);
     });
