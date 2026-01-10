@@ -45,6 +45,9 @@ export const removeData = async (path: string) => {
 export const subscribeToData = (path: string, callback: (data: any) => void) => {
   return onValue(dbRef(path), (snapshot) => {
     callback(snapshot.exists() ? snapshot.val() : null);
+  }, (error) => {
+    console.error(`Firebase subscription error for ${path}:`, error);
+    callback(null);
   });
 };
 
