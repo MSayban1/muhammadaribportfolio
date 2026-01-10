@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, get, set, push, remove, update, onValue } from 'firebase/database';
+import { getDatabase, ref, get, set, push, remove, update, onValue, DataSnapshot } from 'firebase/database';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -20,35 +20,68 @@ export const auth = getAuth(app);
 export const dbRef = (path: string) => ref(database, path);
 
 export const getData = async (path: string) => {
-  const snapshot = await get(dbRef(path));
-  return snapshot.exists() ? snapshot.val() : null;
+  try {
+    const snapshot = await get(dbRef(path));
+    return snapshot.exists() ? snapshot.val() : null;
+  } catch (error) {
+    console.error(`Firebase getData error for ${path}:`, error);
+    return null;
+  }
 };
 
 export const setData = async (path: string, data: any) => {
-  await set(dbRef(path), data);
+  try {
+    await set(dbRef(path), data);
+    return true;
+  } catch (error) {
+    console.error(`Firebase setData error for ${path}:`, error);
+    throw error;
+  }
 };
 
 export const pushData = async (path: string, data: any) => {
-  const newRef = push(dbRef(path));
-  await set(newRef, data);
-  return newRef.key;
+  try {
+    const newRef = push(dbRef(path));
+    await set(newRef, data);
+    return newRef.key;
+  } catch (error) {
+    console.error(`Firebase pushData error for ${path}:`, error);
+    throw error;
+  }
 };
 
 export const updateData = async (path: string, data: any) => {
-  await update(dbRef(path), data);
+  try {
+    await update(dbRef(path), data);
+    return true;
+  } catch (error) {
+    console.error(`Firebase updateData error for ${path}:`, error);
+    throw error;
+  }
 };
 
 export const removeData = async (path: string) => {
-  await remove(dbRef(path));
+  try {
+    await remove(dbRef(path));
+    return true;
+  } catch (error) {
+    console.error(`Firebase removeData error for ${path}:`, error);
+    throw error;
+  }
 };
 
 export const subscribeToData = (path: string, callback: (data: any) => void) => {
-  return onValue(dbRef(path), (snapshot) => {
-    callback(snapshot.exists() ? snapshot.val() : null);
-  }, (error) => {
-    console.error(`Firebase subscription error for ${path}:`, error);
-    callback(null);
-  });
+  const unsubscribe = onValue(
+    dbRef(path), 
+    (snapshot: DataSnapshot) => {
+      callback(snapshot.exists() ? snapshot.val() : null);
+    }, 
+    (error) => {
+      console.error(`Firebase subscription error for ${path}:`, error);
+      callback(null);
+    }
+  );
+  return unsubscribe;
 };
 
 // Auth helpers
