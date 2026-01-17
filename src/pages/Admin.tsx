@@ -1346,6 +1346,12 @@ const RequestsViewer = ({ hireRequests, contacts, services, onUpdate }: { hireRe
                 <div>
                   <h4 className="font-semibold">{contact.name}</h4>
                   <p className="text-sm text-muted-foreground">{contact.email}</p>
+                  {contact.website && (
+                    <p className="text-sm text-primary">
+                      <Globe size={14} className="inline mr-1" />
+                      {contact.website}
+                    </p>
+                  )}
                 </div>
                 {!contact.read && (
                   <button onClick={() => handleMarkRead(contact.id!)} className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full hover:bg-primary/30">

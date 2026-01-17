@@ -11,6 +11,7 @@ const ContactSection = () => {
   const [form, setForm] = useState({
     name: '',
     email: '',
+    website: '',
     message: ''
   });
   const [submitting, setSubmitting] = useState(false);
@@ -21,6 +22,7 @@ const ContactSection = () => {
       await pushData('contacts', {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
+        website: form.website.trim(),
         message: form.message.trim(),
         date: new Date().toISOString(),
         read: false
@@ -32,6 +34,7 @@ const ContactSection = () => {
       setForm({
         name: '',
         email: '',
+        website: '',
         message: ''
       });
     } catch (error: any) {
@@ -188,6 +191,14 @@ const ContactSection = () => {
                 <input type="email" placeholder="your@email.com" value={form.email} onChange={e => setForm({
                 ...form,
                 email: e.target.value
+              })} className="input-modern" />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Your Website/Company</label>
+                <input type="text" placeholder="www.yourwebsite.com or Company Name" value={form.website} onChange={e => setForm({
+                ...form,
+                website: e.target.value
               })} className="input-modern" />
               </div>
               
