@@ -204,7 +204,11 @@ export interface Visitor {
   ip: string;
   country: string;
   city?: string;
+  browser?: string;
+  language?: string;
+  timezone?: string;
   lastVisit: string;
+  firstVisit?: string;
   visitCount: number;
 }
 

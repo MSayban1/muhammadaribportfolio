@@ -152,6 +152,7 @@ const AdminPage = () => {
     { id: 'posts', label: 'Posts', icon: FileText },
     { id: 'requests', label: 'Requests', icon: Mail },
     { id: 'emails', label: 'Email List', icon: AtSign },
+    { id: 'viewers', label: 'Viewers', icon: Eye },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'admins', label: 'Admins', icon: Shield },
     { id: 'export', label: 'Export Data', icon: Download },
@@ -279,6 +280,9 @@ const AdminPage = () => {
           )}
           {activeTab === 'emails' && (
             <EmailListViewer hireRequests={hireRequests} contacts={contacts} />
+          )}
+          {activeTab === 'viewers' && (
+            <ViewersManager />
           )}
           {activeTab === 'analytics' && (
             <AnalyticsDashboard hireRequests={hireRequests} contacts={contacts} />
@@ -2514,6 +2518,276 @@ const AdminsManager = ({ currentUserEmail }: { currentUserEmail: string }) => {
       <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
         <p className="text-sm text-yellow-600 dark:text-yellow-400">
           <strong>Note:</strong> When you add a new admin, they will be created in Firebase Authentication and can login to this admin panel with their credentials.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// Viewers Manager with Pagination and Delete
+const ViewersManager = () => {
+  const [analytics, setAnalytics] = useState<{ pageViews: number; visitors: { [key: string]: Visitor } }>({ pageViews: 0, visitors: {} });
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const ITEMS_PER_PAGE = 30;
+
+  useEffect(() => {
+    const unsubscribe = subscribeToData('analytics', (data) => {
+      if (data) {
+        setAnalytics(data);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const visitorsList = Object.entries(analytics.visitors || {}).map(([key, visitor]) => ({
+    id: key,
+    ...visitor
+  })).sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime());
+
+  const totalPages = Math.ceil(visitorsList.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentVisitors = visitorsList.slice(startIndex, endIndex);
+
+  const handleDeleteVisitor = async (visitorId: string) => {
+    if (!confirm('Are you sure you want to delete this visitor record?')) return;
+    
+    setDeleting(visitorId);
+    try {
+      const updatedVisitors = { ...analytics.visitors };
+      delete updatedVisitors[visitorId];
+      await setData('analytics', { ...analytics, visitors: updatedVisitors });
+      toast({ title: "Deleted", description: "Visitor record has been deleted." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete visitor.", variant: "destructive" });
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleClearAllVisitors = async () => {
+    if (!confirm('Are you sure you want to delete ALL visitor records? This action cannot be undone.')) return;
+    
+    try {
+      await setData('analytics', { pageViews: 0, visitors: {} });
+      setCurrentPage(1);
+      toast({ title: "Cleared", description: "All visitor records and page views have been cleared." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to clear visitors.", variant: "destructive" });
+    }
+  };
+
+  const handleResetPageViews = async () => {
+    if (!confirm('Are you sure you want to reset the page view counter to 0?')) return;
+    
+    try {
+      await setData('analytics', { ...analytics, pageViews: 0 });
+      toast({ title: "Reset", description: "Page views counter has been reset to 0." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to reset page views.", variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">Viewers Management</h2>
+          <p className="text-sm text-muted-foreground">
+            View and manage visitor data • {visitorsList.length} total visitors • {analytics.pageViews || 0} page views
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleResetPageViews}
+            className="btn-outline flex items-center gap-2 text-sm"
+          >
+            <BarChart3 size={16} />
+            Reset Views
+          </button>
+          <button
+            onClick={handleClearAllVisitors}
+            className="btn-outline text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground flex items-center gap-2 text-sm"
+          >
+            <Trash2 size={16} />
+            Clear All
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card-elevated p-4 text-center">
+          <Eye className="mx-auto text-primary mb-2" size={24} />
+          <p className="text-2xl font-bold gradient-text">{analytics.pageViews || 0}</p>
+          <p className="text-xs text-muted-foreground">Total Page Views</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <Users className="mx-auto text-primary mb-2" size={24} />
+          <p className="text-2xl font-bold gradient-text">{visitorsList.length}</p>
+          <p className="text-xs text-muted-foreground">Unique Visitors</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <Globe className="mx-auto text-green-500 mb-2" size={24} />
+          <p className="text-2xl font-bold text-green-500">{currentPage}</p>
+          <p className="text-xs text-muted-foreground">Current Page</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <MapPin className="mx-auto text-blue-500 mb-2" size={24} />
+          <p className="text-2xl font-bold text-blue-500">{totalPages || 1}</p>
+          <p className="text-xs text-muted-foreground">Total Pages</p>
+        </div>
+      </div>
+
+      {/* Visitors Table */}
+      <div className="card-elevated overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-secondary">
+              <tr>
+                <th className="text-left p-4 font-medium">#</th>
+                <th className="text-left p-4 font-medium">Visitor ID</th>
+                <th className="text-left p-4 font-medium">Region/City</th>
+                <th className="text-left p-4 font-medium">Browser</th>
+                <th className="text-left p-4 font-medium">Visits</th>
+                <th className="text-left p-4 font-medium">Last Visit</th>
+                <th className="text-left p-4 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentVisitors.length > 0 ? (
+                currentVisitors.map((visitor, index) => (
+                  <tr key={visitor.id} className="border-t border-border hover:bg-muted/50 transition-colors">
+                    <td className="p-4 text-muted-foreground">{startIndex + index + 1}</td>
+                    <td className="p-4">
+                      <code className="text-xs bg-secondary px-2 py-1 rounded">
+                        {visitor.id.substring(0, 20)}...
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-primary" />
+                        <span>{visitor.country || 'Unknown'}</span>
+                        {visitor.city && <span className="text-muted-foreground">• {visitor.city}</span>}
+                      </div>
+                    </td>
+                    <td className="p-4 text-sm">
+                      <span className="px-2 py-1 bg-secondary rounded-lg">
+                        {visitor.browser || 'Unknown'}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className="font-medium">{visitor.visitCount}</span>
+                    </td>
+                    <td className="p-4 text-sm text-muted-foreground">
+                      {new Date(visitor.lastVisit).toLocaleString()}
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => handleDeleteVisitor(visitor.id)}
+                        disabled={deleting === visitor.id}
+                        className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                        title="Delete Visitor"
+                      >
+                        {deleting === visitor.id ? (
+                          <div className="w-4 h-4 border-2 border-destructive border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    No visitors recorded yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="px-3 py-2 rounded-lg bg-secondary hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            First
+          </button>
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 rounded-lg bg-secondary hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Previous
+          </button>
+          
+          <div className="flex gap-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-10 h-10 rounded-lg transition-colors ${
+                    currentPage === pageNum 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-secondary hover:bg-muted'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+          
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 rounded-lg bg-secondary hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Next
+          </button>
+          <button
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 rounded-lg bg-secondary hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Last
+          </button>
+        </div>
+      )}
+
+      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+        <p className="text-sm text-blue-600 dark:text-blue-400">
+          <strong>Note:</strong> Visitor data is tracked using browser identifiers. Region is derived from timezone settings. 
+          Each page shows {ITEMS_PER_PAGE} visitors.
         </p>
       </div>
     </div>

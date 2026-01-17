@@ -12,32 +12,10 @@ import Footer from '@/components/Footer';
 import { getData, setData } from '@/lib/firebase';
 
 const Index = () => {
-  // Track page views with IP and country
+  // Track page views - simple visitor tracking without third-party APIs
   useEffect(() => {
     const trackVisit = async () => {
       try {
-        // Get visitor IP and location info
-        let visitorInfo = {
-          ip: 'unknown',
-          country: 'Unknown',
-          city: ''
-        };
-
-        try {
-          // Use ipapi.co for IP and location detection
-          const ipResponse = await fetch('https://ipapi.co/json/');
-          if (ipResponse.ok) {
-            const ipData = await ipResponse.json();
-            visitorInfo = {
-              ip: ipData.ip || 'unknown',
-              country: ipData.country_name || 'Unknown',
-              city: ipData.city || ''
-            };
-          }
-        } catch (error) {
-          console.log('Could not get IP info:', error);
-        }
-
         // Get or create visitor ID
         let visitorId = localStorage.getItem('visitorId');
         if (!visitorId) {
@@ -51,16 +29,27 @@ const Index = () => {
         // Increment page views
         analytics.pageViews = (analytics.pageViews || 0) + 1;
         
-        // Track visitor
+        // Track visitor with browser info
         if (!analytics.visitors) analytics.visitors = {};
         
         const existingVisitor = analytics.visitors[visitorId];
+        const browserInfo = navigator.userAgent;
+        const language = navigator.language || 'Unknown';
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown';
+        
         analytics.visitors[visitorId] = {
-          ip: visitorInfo.ip,
-          country: visitorInfo.country,
-          city: visitorInfo.city,
+          ip: visitorId, // Use visitor ID as identifier
+          country: timezone.split('/')[0] || 'Unknown', // Derive region from timezone
+          city: timezone.split('/')[1] || '',
+          browser: browserInfo.includes('Chrome') ? 'Chrome' : 
+                   browserInfo.includes('Firefox') ? 'Firefox' : 
+                   browserInfo.includes('Safari') ? 'Safari' : 
+                   browserInfo.includes('Edge') ? 'Edge' : 'Other',
+          language: language,
+          timezone: timezone,
           visitCount: (existingVisitor?.visitCount || 0) + 1,
-          lastVisit: new Date().toISOString()
+          lastVisit: new Date().toISOString(),
+          firstVisit: existingVisitor?.firstVisit || new Date().toISOString()
         };
         
         await setData('analytics', analytics);
