@@ -17,6 +17,33 @@ const ContactSection = () => {
   const [submitting, setSubmitting] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!form.name.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter your name.",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (!form.email.trim()) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (!form.message.trim()) {
+      toast({
+        title: "Message Required",
+        description: "Please enter your message.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSubmitting(true);
     try {
       await pushData('contacts', {
@@ -179,23 +206,23 @@ const ContactSection = () => {
               <h3 className="text-xl font-semibold mb-4">Contact Us</h3>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Name</label>
+                <label className="block text-sm font-medium mb-2">Name <span className="text-destructive">*</span></label>
                 <input type="text" placeholder="Your Name" value={form.name} onChange={e => setForm({
                 ...form,
                 name: e.target.value
-              })} className="input-modern" />
+              })} className="input-modern" required />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
+                <label className="block text-sm font-medium mb-2">Email <span className="text-destructive">*</span></label>
                 <input type="email" placeholder="your@email.com" value={form.email} onChange={e => setForm({
                 ...form,
                 email: e.target.value
-              })} className="input-modern" />
+              })} className="input-modern" required />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Your Website/Company</label>
+                <label className="block text-sm font-medium mb-2">Your Website/Company <span className="text-muted-foreground text-xs">(Optional)</span></label>
                 <input type="text" placeholder="www.yourwebsite.com or Company Name" value={form.website} onChange={e => setForm({
                 ...form,
                 website: e.target.value
@@ -203,11 +230,11 @@ const ContactSection = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Message</label>
+                <label className="block text-sm font-medium mb-2">Message <span className="text-destructive">*</span></label>
                 <textarea placeholder="How can I help you?" value={form.message} onChange={e => setForm({
                 ...form,
                 message: e.target.value
-              })} rows={5} className="input-modern resize-none" />
+              })} rows={5} className="input-modern resize-none" required />
               </div>
               
               <motion.button type="submit" disabled={submitting} className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50" whileHover={{
