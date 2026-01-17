@@ -187,6 +187,7 @@ export interface ContactSubmission {
   id?: string;
   name: string;
   email: string;
+  website?: string;
   message: string;
   date: string;
   read: boolean;
