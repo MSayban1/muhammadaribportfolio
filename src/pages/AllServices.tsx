@@ -1,40 +1,41 @@
 import { motion } from 'framer-motion';
 import { useServices } from '@/hooks/useFirebaseData';
-import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-const ServicesSection = () => {
+const AllServices = () => {
   const { services, loading } = useServices();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
-      <section id="services" className="py-20">
-        <div className="section-container flex items-center justify-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      </section>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
     );
   }
 
-  // Don't show section if no services
-  if (services.length === 0) return null;
-
-  const displayedServices = services.slice(0, 4);
-  const hasMore = services.length > 4;
-
   return (
-    <section id="services" className="py-20">
+    <div className="min-h-screen bg-background py-20">
       <div className="section-container">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-8 flex items-center gap-2"
+        >
+          <ArrowLeft size={20} />
+          Back to Home
+        </Button>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            My <span className="gradient-text">Services</span>
-          </h2>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+            All <span className="gradient-text">Services</span>
+          </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Comprehensive digital marketing solutions tailored to your brand's unique needs.
           </p>
@@ -42,13 +43,12 @@ const ServicesSection = () => {
         </motion.div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {displayedServices.map((service, index) => (
+          {services.map((service, index) => (
             <Link key={service.id} to={`/service/${service.id}`}>
               <motion.div
                 className="card-elevated overflow-hidden group cursor-pointer h-full"
                 initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -10 }}
                 whileTap={{ scale: 0.98 }}
@@ -77,24 +77,14 @@ const ServicesSection = () => {
           ))}
         </div>
 
-        {hasMore && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mt-10"
-          >
-            <Link to="/services">
-              <Button size="lg" className="gap-2">
-                Explore All Services
-                <ArrowRight size={18} />
-              </Button>
-            </Link>
-          </motion.div>
+        {services.length === 0 && (
+          <div className="text-center py-20 text-muted-foreground">
+            No services available yet.
+          </div>
         )}
       </div>
-    </section>
+    </div>
   );
 };
 
-export default ServicesSection;
+export default AllServices;

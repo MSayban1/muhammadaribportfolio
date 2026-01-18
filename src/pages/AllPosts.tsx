@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
 import { usePosts } from '@/hooks/useFirebaseData';
-import { Calendar, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Calendar, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-const PostsSection = () => {
+const AllPosts = () => {
   const { posts, loading } = usePosts();
+  const navigate = useNavigate();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -17,46 +18,45 @@ const PostsSection = () => {
 
   if (loading) {
     return (
-      <section id="posts" className="py-20 bg-card/50">
-        <div className="section-container flex items-center justify-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      </section>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
     );
   }
 
-  // Don't show section if no posts
-  if (posts.length === 0) return null;
-
-  const displayedPosts = posts.slice(0, 3);
-  const hasMore = posts.length > 3;
-
   return (
-    <section id="posts" className="py-20 bg-card/50">
+    <div className="min-h-screen bg-background py-20">
       <div className="section-container">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-8 flex items-center gap-2"
+        >
+          <ArrowLeft size={20} />
+          Back to Home
+        </Button>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Latest <span className="gradient-text">Posts</span>
-          </h2>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+            All <span className="gradient-text">Posts</span>
+          </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Insights, tips, and thoughts on digital marketing and social media.
           </p>
           <div className="w-20 h-1 bg-gradient-to-r from-primary to-accent mx-auto rounded-full mt-4" />
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {displayedPosts.map((post, index) => (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {posts.map((post, index) => (
             <Link key={post.id} to={`/post/${post.id}`}>
               <motion.article
                 className="card-elevated overflow-hidden group cursor-pointer h-full"
                 initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -5 }}
               >
@@ -91,24 +91,14 @@ const PostsSection = () => {
           ))}
         </div>
 
-        {hasMore && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mt-10"
-          >
-            <Link to="/posts">
-              <Button size="lg" className="gap-2">
-                Explore All Posts
-                <ArrowRight size={18} />
-              </Button>
-            </Link>
-          </motion.div>
+        {posts.length === 0 && (
+          <div className="text-center py-20 text-muted-foreground">
+            No posts available yet.
+          </div>
         )}
       </div>
-    </section>
+    </div>
   );
 };
 
-export default PostsSection;
+export default AllPosts;

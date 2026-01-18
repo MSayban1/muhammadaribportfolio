@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTestimonials } from '@/hooks/useFirebaseData';
-import { Star, Quote, Send } from 'lucide-react';
+import { Star, Quote, Send, ArrowRight } from 'lucide-react';
 import { pushData } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const TestimonialsSection = () => {
   const { testimonials, loading } = useTestimonials();
@@ -51,6 +53,9 @@ const TestimonialsSection = () => {
     );
   }
 
+  const displayedTestimonials = testimonials.slice(0, 3);
+  const hasMore = testimonials.length > 3;
+
   return (
     <section id="testimonials" className="py-20">
       <div className="section-container">
@@ -69,9 +74,9 @@ const TestimonialsSection = () => {
           <div className="w-20 h-1 bg-gradient-to-r from-primary to-accent mx-auto rounded-full mt-4" />
         </motion.div>
 
-        {testimonials.length > 0 && (
+        {displayedTestimonials.length > 0 && (
           <div className="grid md:grid-cols-3 gap-6 mb-12">
-            {testimonials.map((testimonial, index) => (
+            {displayedTestimonials.map((testimonial, index) => (
               <motion.div
                 key={testimonial.id}
                 className="card-elevated p-6 relative"
@@ -111,6 +116,22 @@ const TestimonialsSection = () => {
               </motion.div>
             ))}
           </div>
+        )}
+
+        {hasMore && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Link to="/testimonials">
+              <Button size="lg" className="gap-2">
+                Explore All Testimonials
+                <ArrowRight size={18} />
+              </Button>
+            </Link>
+          </motion.div>
         )}
 
         {/* Feedback Button / Form */}
