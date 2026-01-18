@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://id-preview--c369f485-6564-4bd6-8fb5-87f634796fe2.lovable.app/sitemap.xml
+Sitemap: https://www.marib.website/sitemap.xml
