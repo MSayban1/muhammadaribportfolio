@@ -1,40 +1,41 @@
 import { motion } from 'framer-motion';
 import { useProjects } from '@/hooks/useFirebaseData';
-import { ExternalLink, Folder, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ExternalLink, Folder, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-const PortfolioSection = () => {
+const AllProjects = () => {
   const { projects, loading } = useProjects();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
-      <section id="portfolio" className="py-20 bg-card/50">
-        <div className="section-container flex items-center justify-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      </section>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
     );
   }
 
-  // Don't show section if no projects
-  if (projects.length === 0) return null;
-
-  const displayedProjects = projects.slice(0, 3);
-  const hasMore = projects.length > 3;
-
   return (
-    <section id="portfolio" className="py-20 bg-card/50">
+    <div className="min-h-screen bg-background py-20">
       <div className="section-container">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-8 flex items-center gap-2"
+        >
+          <ArrowLeft size={20} />
+          Back to Home
+        </Button>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            My <span className="gradient-text">Work</span>
-          </h2>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+            All <span className="gradient-text">Projects</span>
+          </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             A showcase of successful campaigns and projects that delivered real results.
           </p>
@@ -42,13 +43,12 @@ const PortfolioSection = () => {
         </motion.div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayedProjects.map((project, index) => (
+          {projects.map((project, index) => (
             <motion.div
               key={project.id}
               className="card-elevated overflow-hidden group"
               initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -5 }}
             >
@@ -85,24 +85,14 @@ const PortfolioSection = () => {
           ))}
         </div>
 
-        {hasMore && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mt-10"
-          >
-            <Link to="/portfolio">
-              <Button size="lg" className="gap-2">
-                Explore All Projects
-                <ArrowRight size={18} />
-              </Button>
-            </Link>
-          </motion.div>
+        {projects.length === 0 && (
+          <div className="text-center py-20 text-muted-foreground">
+            No projects available yet.
+          </div>
         )}
       </div>
-    </section>
+    </div>
   );
 };
 
-export default PortfolioSection;
+export default AllProjects;
